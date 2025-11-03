@@ -7,85 +7,42 @@
  * - Gestionar usuarios (agregar)
  * - Ver y aprobar/rechazar préstamos
  */
-import { useState } from 'react';
-import { BookList } from '../books/BookList';
-import { BookForm } from '../books/BookForm';
-import { LoanList } from '../loans/LoanList';
-import { UserForm } from '../users/UserForm';
-import { UserList } from '../users/UserList';
+import { useMemo } from 'react';
+import { bookService } from '../../services/book.service';
+import { userService } from '../../services/user.service';
+import { loanService } from '../../services/loan.service';
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'books' | 'loans' | 'users'>('books');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const books = useMemo(() => bookService.getAll(), []);
+  const users = useMemo(() => userService.getAll(), []);
+  const loans = useMemo(() => loanService.getAll(), []);
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  const totalBooks = books.length;
+  const totalUsers = users.length;
+  const loansByStatus = loans.reduce<Record<string, number>>((acc, l) => { acc[l.status] = (acc[l.status]||0)+1; return acc; }, {});
+  const availableBooks = books.filter(b => b.status === 'disponible').length;
 
   return (
-    <div className="container-fluid mt-4">
-      <h1 className="mb-4">Panel de Administración</h1>
-      
-      {/* Tabs de Bootstrap */}
-      <ul className="nav nav-tabs mb-4" role="tablist">
-        <li className="nav-item" role="presentation">
-          <button
-            className={`nav-link ${activeTab === 'books' ? 'active' : ''}`}
-            onClick={() => setActiveTab('books')}
-          >
-            Libros
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className={`nav-link ${activeTab === 'loans' ? 'active' : ''}`}
-            onClick={() => setActiveTab('loans')}
-          >
-            Préstamos
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className={`nav-link ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
-            Usuarios
-          </button>
-        </li>
-      </ul>
-
-      {/* Contenido de las tabs */}
-      <div className="tab-content">
-        {activeTab === 'books' && (
-          <div className="row">
-            <div className="col-md-4 mb-4">
-              <BookForm onSave={handleRefresh} />
+    <div>
+      <h2 className="mb-4">Dashboard</h2>
+      <div className="row g-3">
+        <div className="col-md-3">
+          <div className="card text-bg-light"><div className="card-body"><div className="h5 mb-0">Libros</div><div className="display-6">{totalBooks}</div></div></div>
+        </div>
+        <div className="col-md-3">
+          <div className="card text-bg-light"><div className="card-body"><div className="h5 mb-0">Usuarios</div><div className="display-6">{totalUsers}</div></div></div>
+        </div>
+        <div className="col-md-3">
+          <div className="card text-bg-light"><div className="card-body"><div className="h5 mb-0">Disponibles</div><div className="display-6">{availableBooks}</div></div></div>
+        </div>
+        <div className="col-md-3">
+          <div className="card text-bg-light"><div className="card-body"><div className="h6 mb-2">Préstamos por estado</div>
+            <div className="d-flex gap-2 flex-wrap">
+              {Object.entries(loansByStatus).map(([k,v]) => (<span key={k} className="badge text-bg-secondary">{k}: {v}</span>))}
+              {Object.keys(loansByStatus).length===0 && <span className="text-muted">Sin préstamos</span>}
             </div>
-            <div className="col-md-8">
-              <h3>Catálogo de Libros</h3>
-              <BookList key={refreshKey} />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'loans' && (
-          <div>
-            <h3>Gestión de Préstamos</h3>
-            <LoanList isAdmin={true} />
-          </div>
-        )}
-
-        {activeTab === 'users' && (
-          <div className="row">
-            <div className="col-md-4 mb-4">
-              <UserForm onSave={handleRefresh} />
-            </div>
-            <div className="col-md-8">
-              <h3>Usuarios Registrados</h3>
-              <UserList key={refreshKey} />
-            </div>
-          </div>
-        )}
+          </div></div>
+        </div>
       </div>
     </div>
   );

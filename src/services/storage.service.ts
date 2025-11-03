@@ -5,17 +5,17 @@
  * de JSON.parse/stringify en cada servicio. Si en el futuro se cambia a IndexedDB
  * o a un backend real, solo hay que modificar este archivo.
  * 
- * Las claves usadas son las mismas que en el ERS original:
- * - 'libros' para el catálogo de libros
- * - 'usuarios' para los usuarios
- * - 'prestamos' para los préstamos
- * - 'adminSession' para la sesión de administrador
+ * Claves estándar para toda la app:
+ * - 'books' catálogo de libros
+ * - 'users' usuarios
+ * - 'loans' préstamos
+ * - 'session' sesión del usuario actual
  */
 const STORAGE_KEYS = {
-  books: 'libros',
-  users: 'usuarios',
-  loans: 'prestamos',
-  admin: 'adminSession'
+  books: 'books',
+  users: 'users',
+  loans: 'loans',
+  session: 'session'
 } as const;
 
 /**

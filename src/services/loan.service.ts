@@ -29,20 +29,23 @@ export const loanService = {
   },
 
   /**
-   * Crea un nuevo préstamo (simulación de préstamo del ERS).
-   * El préstamo se crea con estado 'pendiente' hasta que el admin lo apruebe.
+   * Solicitud de préstamo: crea Loan en estado 'pendiente' con dueDate (14 días).
    * 
-   * @param userId - ID del usuario que solicita el préstamo
-   * @param bookId - ID del libro que se quiere prestar
-   * @returns El préstamo creado
+   * @param userId id del usuario
+   * @param bookId id del libro
+   * @returns préstamo creado
    */
-  create(userId: string, bookId: string): Loan {
+  request(userId: string, bookId: string): Loan {
     const current = this.getAll();
+    const now = new Date();
+    const due = new Date(now);
+    due.setDate(now.getDate() + 14);
     const newLoan: Loan = {
       id: crypto.randomUUID(),
       userId,
       bookId,
-      loanDate: new Date().toISOString(),
+      loanDate: now.toISOString(),
+      dueDate: due.toISOString(),
       status: 'pendiente'
     };
     current.push(newLoan);
@@ -93,12 +96,13 @@ export const loanService = {
    * @param loanId - ID del préstamo a devolver
    * @returns El préstamo actualizado, o null si no se encontró
    */
-  return(loanId: string): Loan | null {
+  returnBook(loanId: string): Loan | null {
     const loans = this.getAll();
     const loan = loans.find(l => l.id === loanId);
     if (!loan || loan.status !== 'aprobado') return null;
 
     loan.returnDate = new Date().toISOString();
+    loan.status = 'devuelto';
     // Actualizar estado del libro a 'disponible'
     bookService.update(loan.bookId, { status: 'disponible' });
     
@@ -109,7 +113,7 @@ export const loanService = {
   /**
    * Obtiene todos los préstamos de un usuario.
    */
-  getByUserId(userId: string): Loan[] {
+  getByUser(userId: string): Loan[] {
     return this.getAll().filter(l => l.userId === userId);
   },
 

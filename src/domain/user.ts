@@ -8,7 +8,8 @@
 export interface User {
   id: string;      // Identificador único del usuario
   name: string;    // Nombre completo del usuario
-  email: string;   // Email del usuario (puede usarse para login en el futuro)
+  email: string;   // Email del usuario (puede usarse para login ligero)
+  role: 'Admin' | 'User'; // Rol del usuario
 }
 
 

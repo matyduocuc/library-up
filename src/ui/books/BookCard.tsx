@@ -16,8 +16,8 @@ export function BookCard({ book, onSelect, showActions = false }: BookCardProps)
   const statusColors = {
     disponible: 'bg-success',
     prestado: 'bg-warning',
-    reservado: 'bg-info'
-  };
+    mantenimiento: 'bg-secondary'
+  } as const;
 
   return (
     <div className="card h-100 shadow-sm">

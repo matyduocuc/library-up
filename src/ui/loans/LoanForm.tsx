@@ -45,8 +45,8 @@ export function LoanForm({ book, onLoanCreated }: LoanFormProps) {
       return;
     }
 
-    // Crear el préstamo (estado 'pendiente', el admin lo aprobará)
-    loanService.create(selectedUserId, selectedBook.id);
+    // Crear la solicitud de préstamo (pendiente, el admin lo aprobará)
+    loanService.request(selectedUserId, selectedBook.id);
     
     setMessage({ type: 'success', text: 'Préstamo solicitado exitosamente. Espera aprobación del administrador.' });
     

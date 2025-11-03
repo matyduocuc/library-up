@@ -10,8 +10,9 @@ export interface Loan {
   userId: string;                // ID del usuario que solicita el préstamo
   bookId: string;                // ID del libro que se presta
   loanDate: string;              // Fecha de inicio del préstamo (ISO string)
+  dueDate: string;               // Fecha de vencimiento (ISO string)
   returnDate?: string;           // Fecha de devolución (opcional, solo si ya se devolvió)
-  status: 'pendiente' | 'aprobado' | 'rechazado';  // Estado del préstamo según el ERS
+  status: 'pendiente' | 'aprobado' | 'rechazado' | 'devuelto';  // Estado del préstamo
 }
 
 

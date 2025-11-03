@@ -26,6 +26,27 @@ export const bookService = {
   },
 
   /**
+   * Búsqueda simple por título o autor (case-insensitive)
+   */
+  search(query: string): Book[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return this.getAll();
+    return this.getAll().filter(b => 
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q)
+    );
+  },
+
+  /**
+   * Filtra por categoría exacta
+   */
+  filterByCategory(category: string): Book[] {
+    const cat = category.trim().toLowerCase();
+    if (!cat) return this.getAll();
+    return this.getAll().filter(b => b.category.toLowerCase() === cat);
+  },
+
+  /**
    * Guarda el array completo de libros en localStorage.
    * 
    * @param books - Array de libros a guardar
@@ -94,6 +115,13 @@ export const bookService = {
     
     this.saveAll(filtered);
     return true;
+  },
+
+  /**
+   * Alias con el nombre solicitado en los requisitos
+   */
+  remove(id: string): boolean {
+    return this.delete(id);
   }
 };
 

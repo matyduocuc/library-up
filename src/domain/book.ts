@@ -10,7 +10,7 @@ export interface Book {
   title: string;        // Título del libro
   author: string;       // Autor del libro
   category: string;     // Categoría/temática del libro
-  status: 'disponible' | 'prestado' | 'reservado';  // Estado actual del libro
+  status: 'disponible' | 'prestado' | 'mantenimiento';  // Estado actual del libro
 }
 
 

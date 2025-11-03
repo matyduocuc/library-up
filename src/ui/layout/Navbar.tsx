@@ -1,47 +1,39 @@
-/**
- * Componente de navegación (Navbar)
- * 
- * Barra de navegación usando Bootstrap 5 que permite cambiar entre
- * vista de usuario y vista de administrador, igual que en el ERS original
- * donde había index.html y admin.html separados.
- * 
- * El componente recibe el estado isAdmin y la función onToggleAdmin como props,
- * manteniendo la separación de responsabilidades: App.tsx maneja la lógica
- * de sesión usando adminService, y Navbar solo se encarga de la presentación.
- */
-interface NavbarProps {
-  isAdmin: boolean;
-  onToggleAdmin: () => void;
-}
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { userService } from '../../services/user.service';
 
-export function Navbar({ isAdmin, onToggleAdmin }: NavbarProps) {
+export function Navbar() {
+  const navigate = useNavigate();
+  const session = userService.getSession();
+  const handleLogout = () => {
+    userService.logout();
+    navigate('/');
+  };
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
-      <div className="container-fluid">
-        <a className="navbar-brand" href="#">
-          Biblioteca Digital
-        </a>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div className="container">
+        <Link to="/" className="navbar-brand">LibraryUp</Link>
+        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic">
           <span className="navbar-toggler-icon"></span>
         </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
+        <div className="collapse navbar-collapse" id="navPublic">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <li className="nav-item"><NavLink className="nav-link" to="/">Home</NavLink></li>
+            <li className="nav-item"><NavLink className="nav-link" to="/catalog">Catálogo</NavLink></li>
+            <li className="nav-item"><NavLink className="nav-link" to="/my-loans">Mis Préstamos</NavLink></li>
+          </ul>
           <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <button
-                className="btn btn-outline-light"
-                onClick={onToggleAdmin}
-              >
-                {isAdmin ? 'Salir de Admin' : 'Modo Admin'}
-              </button>
-            </li>
+            {session ? (
+              <>
+                <li className="nav-item">
+                  <span className="navbar-text me-3">{session.name} ({session.role})</span>
+                </li>
+                <li className="nav-item">
+                  <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>Logout</button>
+                </li>
+              </>
+            ) : (
+              <li className="nav-item"><NavLink className="nav-link" to="/login">Login</NavLink></li>
+            )}
           </ul>
         </div>
       </div>
