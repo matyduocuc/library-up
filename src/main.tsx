@@ -5,8 +5,8 @@ import './index.css'
 import { AppRouter } from './router/AppRouter'
 import { seedService } from './services/seed.service'
 
-// Cargar datos de demo si no existen
-seedService.seedAll()
+// Cargar datos de demo si no existen (async)
+seedService.seedAll().catch(console.error)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,41 +1,48 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/user.service';
+import { useNavigate } from 'react-router-dom';
 
 export function Login() {
-  const [email, setEmail] = useState('admin@libra.dev');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const submit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = userService.login(email);
-    if (!user) {
-      setError('No existe un usuario con ese email');
-      return;
+    setErr(null);
+    try {
+      const user = await userService.login(email.trim(), password);
+      navigate('/');
+    } catch (e: any) {
+      setErr(e.message ?? 'Error al iniciar sesión');
     }
-    if (user.role === 'Admin') navigate('/admin'); else navigate('/');
   };
 
   return (
-    <div className="row justify-content-center">
-      <div className="col-md-6">
-        <div className="card">
-          <div className="card-body">
-            <h3 className="card-title mb-3">Iniciar sesión</h3>
-            {error && <div className="alert alert-danger">{error}</div>}
-            <form onSubmit={submit}>
-              <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input className="form-control" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-              <button className="btn btn-primary" type="submit">Entrar</button>
-            </form>
-          </div>
+    <div className="container py-5" style={{ maxWidth: 420 }}>
+      <h3 className="mb-3">Iniciar sesión</h3>
+      {err && <div className="alert alert-danger">{err}</div>}
+      <form onSubmit={onSubmit} className="vstack gap-3">
+        <div>
+          <label className="form-label">Email</label>
+          <input className="form-control" value={email} onChange={e => setEmail(e.target.value)} required />
         </div>
-      </div>
+        <div>
+          <label className="form-label">Contraseña</label>
+          <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} required />
+          <div className="form-text">Demo: 123456</div>
+        </div>
+        <button className="btn btn-primary w-100" type="submit">Entrar</button>
+      </form>
     </div>
   );
 }
+
+/*
+Explicación:
+- Valida email + contraseña y guarda la sesión mediante userService.
+- Contraseña demo para usuarios seed: 123456.
+*/
 
 

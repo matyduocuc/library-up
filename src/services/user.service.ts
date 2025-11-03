@@ -6,6 +6,7 @@
  */
 import { storageService } from './storage.service';
 import type { User } from '../domain/user';
+import { sha256 } from './hash.util';
 
 export const userService = {
   /**
@@ -77,22 +78,49 @@ export const userService = {
   },
 
   /**
-   * Inicia sesión "ligera" por email; si existe el usuario lo guarda en session.
+   * Guarda el array completo de usuarios (alias para compatibilidad)
    */
-  login(email: string): User | null {
-    const user = this.getByEmail(email);
-    if (user) {
-      storageService.write(storageService.keys.session, user);
-      return user;
+  setSession(user: User | null): void {
+    storageService.write(storageService.keys.session, user);
+  },
+
+  /**
+   * Registra un nuevo usuario con contraseña hasheada
+   */
+  async register(name: string, email: string, password: string, role: User['role'] = 'User'): Promise<User> {
+    const users = this.getAll();
+    if (users.some(u => u.email === email)) {
+      throw new Error('Email ya registrado');
     }
-    return null;
+    const passwordHash = await sha256(password);
+    const newUser: User = { id: crypto.randomUUID(), name, email, role, passwordHash };
+    users.push(newUser);
+    this.saveAll(users);
+    return newUser;
+  },
+
+  /**
+   * Inicia sesión con email y contraseña (valida hash)
+   */
+  async login(email: string, password: string): Promise<User> {
+    const users = this.getAll();
+    const user = users.find(u => u.email === email);
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    const passwordHash = await sha256(password);
+    if (user.passwordHash !== passwordHash) {
+      throw new Error('Contraseña incorrecta');
+    }
+    this.setSession(user);
+    return user;
   },
 
   /**
    * Cierra sesión
    */
   logout(): void {
-    storageService.write(storageService.keys.session, null);
+    this.setSession(null);
   },
 
   /**
@@ -102,5 +130,11 @@ export const userService = {
     return storageService.read<User | null>(storageService.keys.session, null);
   }
 };
+
+/*
+Explicación:
+- register/login trabajan con hash de contraseña; la sesión se guarda en localStorage.
+- El resto de la app solo lee userService.getSession() para saber si hay login.
+*/
 
 

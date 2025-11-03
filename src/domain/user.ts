@@ -10,6 +10,13 @@ export interface User {
   name: string;    // Nombre completo del usuario
   email: string;   // Email del usuario (puede usarse para login ligero)
   role: 'Admin' | 'User'; // Rol del usuario
+  passwordHash: string; // NUEVO: hash de contraseña
 }
+
+/*
+Explicación:
+- Se agrega passwordHash para validar credenciales sin guardar texto plano.
+- Esta estructura es compatible con un backend futuro (mismo campo).
+*/
 
 
