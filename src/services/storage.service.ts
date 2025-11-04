@@ -15,7 +15,9 @@ const STORAGE_KEYS = {
   books: 'books',
   users: 'users',
   loans: 'loans',
-  session: 'session'
+  session: 'session',
+  cart: 'cart',
+  admin: 'admin'
 } as const;
 
 /**

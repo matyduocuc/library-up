@@ -11,6 +11,7 @@ import { useMemo } from 'react';
 import { bookService } from '../../services/book.service';
 import { userService } from '../../services/user.service';
 import { loanService } from '../../services/loan.service';
+import { DebugUsers } from '../dev/DebugUsers';
 
 export function AdminDashboard() {
   const books = useMemo(() => bookService.getAll(), []);
@@ -44,6 +45,7 @@ export function AdminDashboard() {
           </div></div>
         </div>
       </div>
+      <DebugUsers />
     </div>
   );
 }

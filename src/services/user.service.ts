@@ -2,52 +2,134 @@
  * Servicio de gestión de usuarios
  * 
  * Maneja la lógica relacionada con usuarios del sistema.
- * Similar a bookService, pero para la entidad User.
+ * Centraliza el manejo de passwordHash: la UI nunca lo toca directamente.
  */
 import { storageService } from './storage.service';
-import type { User } from '../domain/user';
-import { sha256 } from './hash.util';
+import type { User, PublicUser, CreateUserDto } from '../domain/user';
+import { sha256Hex } from './crypto.util';
+
+const K = { users: 'users', session: 'session' };
+
+/**
+ * Convierte User interno a PublicUser (sin passwordHash)
+ */
+function toPublic(u: User): PublicUser {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role
+  };
+}
 
 export const userService = {
   /**
-   * Obtiene todos los usuarios registrados.
+   * Obtiene todos los usuarios registrados (internos con passwordHash)
    */
   getAll(): User[] {
-    return storageService.read<User[]>(storageService.keys.users, []);
+    return storageService.read<User[]>(K.users, []);
   },
 
   /**
-   * Guarda el array completo de usuarios.
+   * Guarda el array completo de usuarios
    */
   saveAll(users: User[]): void {
-    storageService.write(storageService.keys.users, users);
+    storageService.write(K.users, users);
   },
 
   /**
-   * Agrega un nuevo usuario.
+   * Busca un usuario por email (case-insensitive)
    */
-  add(user: Omit<User, 'id'>): User {
-    const current = this.getAll();
-    const newUser: User = { 
-      ...user, 
-      id: crypto.randomUUID() 
+  findByEmail(email: string): User | null {
+    return this.getAll().find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  },
+
+  /**
+   * Busca un usuario por su ID
+   */
+  getById(id: string): User | null {
+    return this.getAll().find(u => u.id === id) || null;
+  },
+
+  /**
+   * Crea un usuario desde Admin (genera passwordHash automáticamente)
+   */
+  async createByAdmin(dto: CreateUserDto): Promise<PublicUser> {
+    if (this.findByEmail(dto.email)) {
+      throw new Error('Email ya registrado');
+    }
+    const passwordHash = await sha256Hex(dto.password);
+    const newUser: User = {
+      id: crypto.randomUUID(),
+      name: dto.name.trim(),
+      email: dto.email.trim().toLowerCase(),
+      role: dto.role,
+      passwordHash
     };
-    current.push(newUser);
-    this.saveAll(current);
-    return newUser;
+    const list = this.getAll();
+    list.push(newUser);
+    this.saveAll(list);
+    return toPublic(newUser);
   },
 
   /**
-   * Actualiza un usuario por ID
+   * Registra un nuevo usuario (genera passwordHash automáticamente)
    */
-  update(id: string, partial: Partial<User>): User | null {
+  async register(dto: Omit<CreateUserDto, 'role'> & { role?: 'User' }): Promise<PublicUser> {
+    const role = dto.role ?? 'User';
+    return this.createByAdmin({ ...dto, role });
+  },
+
+  /**
+   * Inicia sesión con email y contraseña (valida hash)
+   */
+  async login(email: string, password: string): Promise<PublicUser> {
+    const user = this.findByEmail(email);
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    const passwordHash = await sha256Hex(password);
+    if (user.passwordHash !== passwordHash) {
+      throw new Error('Contraseña incorrecta');
+    }
+    const publicUser = toPublic(user);
+    this.setSession(publicUser);
+    return publicUser;
+  },
+
+  /**
+   * Cierra sesión
+   */
+  logout(): void {
+    this.setSession(null);
+  },
+
+  /**
+   * Guarda la sesión actual (solo PublicUser, sin passwordHash)
+   */
+  setSession(user: PublicUser | null): void {
+    storageService.write(K.session, user);
+  },
+
+  /**
+   * Obtiene la sesión actual (PublicUser sin passwordHash)
+   */
+  getSession(): PublicUser | null {
+    return storageService.read<PublicUser | null>(K.session, null);
+  },
+
+  /**
+   * Actualiza un usuario por ID (solo campos públicos, sin passwordHash)
+   */
+  update(id: string, partial: Partial<PublicUser>): PublicUser | null {
     const current = this.getAll();
     const idx = current.findIndex(u => u.id === id);
     if (idx === -1) return null;
-    const updated = { ...current[idx], ...partial } as User;
+    
+    const updated: User = { ...current[idx], ...partial };
     current[idx] = updated;
     this.saveAll(current);
-    return updated;
+    return toPublic(updated);
   },
 
   /**
@@ -62,79 +144,35 @@ export const userService = {
   },
 
   /**
-   * Busca un usuario por su ID.
+   * @deprecated Usar createByAdmin o register en su lugar
    */
-  getById(id: string): User | null {
-    const users = this.getAll();
-    return users.find(u => u.id === id) || null;
-  },
-
-  /**
-   * Busca un usuario por su email.
-   */
-  getByEmail(email: string): User | null {
-    const users = this.getAll();
-    return users.find(u => u.email === email) || null;
-  },
-
-  /**
-   * Guarda el array completo de usuarios (alias para compatibilidad)
-   */
-  setSession(user: User | null): void {
-    storageService.write(storageService.keys.session, user);
-  },
-
-  /**
-   * Registra un nuevo usuario con contraseña hasheada
-   */
-  async register(name: string, email: string, password: string, role: User['role'] = 'User'): Promise<User> {
-    const users = this.getAll();
-    if (users.some(u => u.email === email)) {
-      throw new Error('Email ya registrado');
-    }
-    const passwordHash = await sha256(password);
-    const newUser: User = { id: crypto.randomUUID(), name, email, role, passwordHash };
-    users.push(newUser);
-    this.saveAll(users);
+  add(user: Omit<User, 'id'>): User {
+    const current = this.getAll();
+    const newUser: User = { 
+      ...user, 
+      id: crypto.randomUUID() 
+    };
+    current.push(newUser);
+    this.saveAll(current);
     return newUser;
   },
 
   /**
-   * Inicia sesión con email y contraseña (valida hash)
+   * @deprecated Usar findByEmail en su lugar
    */
-  async login(email: string, password: string): Promise<User> {
-    const users = this.getAll();
-    const user = users.find(u => u.email === email);
-    if (!user) {
-      throw new Error('Usuario no encontrado');
-    }
-    const passwordHash = await sha256(password);
-    if (user.passwordHash !== passwordHash) {
-      throw new Error('Contraseña incorrecta');
-    }
-    this.setSession(user);
-    return user;
-  },
-
-  /**
-   * Cierra sesión
-   */
-  logout(): void {
-    this.setSession(null);
-  },
-
-  /**
-   * Obtiene la sesión actual
-   */
-  getSession(): User | null {
-    return storageService.read<User | null>(storageService.keys.session, null);
+  getByEmail(email: string): User | null {
+    return this.findByEmail(email);
   }
 };
 
 /*
 Explicación:
-- register/login trabajan con hash de contraseña; la sesión se guarda en localStorage.
-- El resto de la app solo lee userService.getSession() para saber si hay login.
+- El servicio maneja automáticamente el hash de contraseñas: UI nunca toca passwordHash.
+- createByAdmin y register reciben CreateUserDto con password en texto plano.
+- login, getSession y setSession trabajan con PublicUser (sin passwordHash).
+- Separación clara: User interno vs PublicUser para UI.
+- Unifica el hash: seed y login usan la misma función sha256Hex de crypto.util.
+- Compatible con backend futuro: mismo contrato de tipos.
 */
 
 

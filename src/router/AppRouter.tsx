@@ -32,15 +32,18 @@ import { Catalog } from '../ui/public/Catalog';
 import { BookDetail } from '../ui/public/BookDetail';
 import { MyLoans } from '../ui/public/MyLoans';
 import { Login } from '../ui/public/Login';
+import { Register } from '../ui/public/Register';
+import { LoanCart } from '../ui/public/LoanCart';
+import { Receipt } from '../ui/public/Receipt';
 import { AdminDashboard } from '../ui/admin/AdminDashboard';
 import { BooksAdmin } from '../ui/admin/BooksAdmin';
 import { UsersAdmin } from '../ui/admin/UsersAdmin';
 import { LoansAdmin } from '../ui/admin/LoansAdmin';
-import { userService } from '../services/user.service';
+import { useUser } from '../contexts/UserContext';
 
 function AdminGuard() {
-  const session = userService.getSession();
-  if (!session || session.role !== 'Admin') {
+  const { user } = useUser();
+  if (!user || user.role !== 'Admin') {
     return <Navigate to="/login" replace />;
   }
   return (
@@ -73,6 +76,9 @@ export function AppRouter() {
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/book/:id" element={<BookDetail />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/cart" element={<LoanCart />} />
+          <Route path="/receipt" element={<Receipt />} />
           <Route path="/my-loans" element={<MyLoans />} />
         </Route>
 

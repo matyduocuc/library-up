@@ -130,6 +130,27 @@ export const loanService = {
   getById(loanId: string): Loan | null {
     const loans = this.getAll();
     return loans.find(l => l.id === loanId) || null;
+  },
+
+  /**
+   * Crea múltiples préstamos en una sola operación (para carrito)
+   */
+  requestMany(userId: string, bookIds: string[]): Loan[] {
+    const loans = this.getAll();
+    const now = new Date();
+    const due = new Date(now);
+    due.setDate(now.getDate() + 14);
+    const newLoans: Loan[] = bookIds.map(bookId => ({
+      id: crypto.randomUUID(),
+      userId,
+      bookId,
+      loanDate: now.toISOString(),
+      dueDate: due.toISOString(),
+      status: 'pendiente'
+    }));
+    loans.push(...newLoans);
+    this.saveAll(loans);
+    return newLoans;
   }
 };
 

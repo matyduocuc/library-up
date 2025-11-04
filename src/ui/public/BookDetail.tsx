@@ -1,53 +1,88 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { bookService } from '../../services/book.service';
-import { userService } from '../../services/user.service';
-import { loanService } from '../../services/loan.service';
+import { useUser } from '../../contexts/UserContext';
+import { cartService } from '../../services/cart.service';
 
 export function BookDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser();
   const book = bookService.getById(id);
 
   if (!book) {
     return <div className="container py-4"><p className="text-muted">Libro no encontrado.</p></div>;
   }
 
-  const handleRequest = () => {
-    const session = userService.getSession();
-    if (!session) {
+  const handleAddToCart = () => {
+    if (!user) {
       navigate('/login');
       return;
     }
-    loanService.request(session.id, book.id);
-    alert('Solicitud enviada (estado: pendiente).');
-    navigate('/my-loans');
+    cartService.add(book.id);
+    alert('Libro añadido al carrito.');
+    navigate('/cart');
   };
 
   return (
     <div className="container py-4">
       {book.bannerUrl && (
-        <img src={book.bannerUrl} alt="Banner" className="img-fluid rounded mb-3" />
+        <img
+          src={book.bannerUrl}
+          alt="Banner"
+          className="img-fluid rounded-3 shadow-sm mb-4"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback-banner/1200/300';
+          }}
+        />
       )}
-      <div className="row">
+      <div className="row g-4">
         <div className="col-12 col-md-4">
-          {book.coverUrl && <img src={book.coverUrl} alt={book.title} className="img-fluid rounded" />}
+          <img
+            src={book.coverUrl || 'https://picsum.photos/seed/fallback/600/900'}
+            alt={book.title}
+            className="img-fluid rounded-3 shadow-lg"
+            style={{ objectFit: 'cover', width: '100%', maxHeight: 500 }}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback/600/900';
+            }}
+          />
         </div>
         <div className="col-12 col-md-8">
-          <h2 className="mb-2">{book.title}</h2>
-          <p className="text-muted mb-2">{book.author}</p>
-          {book.description && <p className="mb-3">{book.description}</p>}
-          <p className="mb-2"><small className="text-muted"><strong>Categoría:</strong> {book.category}</small></p>
-          <span className={`badge ${book.status === 'disponible' ? 'bg-success' : 'bg-secondary'} mb-3`}>
-            {book.status.toUpperCase()}
-          </span>
-          <div>
-            <button
-              className="btn btn-primary"
-              disabled={book.status !== 'disponible'}
-              onClick={handleRequest}
-            >
-              {book.status === 'disponible' ? 'Solicitar préstamo' : 'No disponible'}
-            </button>
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+              <h2 className="card-title mb-3">{book.title}</h2>
+              <div className="mb-3">
+                <p className="text-muted mb-2">
+                  <i className="bi bi-person me-2"></i>
+                  <strong>Autor:</strong> {book.author}
+                </p>
+                <p className="mb-2">
+                  <i className="bi bi-tag me-2"></i>
+                  <strong>Categoría:</strong> <span className="badge bg-info">{book.category}</span>
+                </p>
+                <span className={`badge ${book.status === 'disponible' ? 'bg-success' : 'bg-secondary'} mb-3`}>
+                  <i className={`bi ${book.status === 'disponible' ? 'bi-check-circle' : 'bi-x-circle'} me-1`}></i>
+                  {book.status === 'disponible' ? 'Disponible' : 'Prestado'}
+                </span>
+              </div>
+              <hr />
+              <div className="mb-4">
+                <h5 className="mb-2">
+                  <i className="bi bi-file-text me-2"></i>Descripción
+                </h5>
+                <p className="text-muted">{book.description}</p>
+              </div>
+              <div className="d-grid gap-2">
+                <button
+                  className="btn btn-primary btn-lg rounded-3 shadow-sm"
+                  disabled={book.status !== 'disponible'}
+                  onClick={handleAddToCart}
+                >
+                  <i className="bi bi-cart-plus me-2" />
+                  {book.status === 'disponible' ? 'Añadir al carrito de préstamo' : 'No disponible'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -57,8 +92,12 @@ export function BookDetail() {
 
 /*
 Explicación:
-- Extrae el libro por id y muestra portada + banner + descripción.
-- El botón "Solicitar préstamo" redirige a /login si no hay sesión.
+- Muestra todos los campos enriquecidos: banner (si existe), portada, autor, categoría y descripción completa.
+- Fallback en imágenes evita "rotas" visuales si la URL falla (CORS/HTTPS).
+- object-fit: cover mantiene proporciones en portada grande.
+- El botón "Añadir al carrito de préstamo" valida sesión: si no hay sesión, navega a /login.
+- Separar "carrito" de "confirmación" permite revisar múltiples libros y generar boleta única.
+- No hay préstamo sin cuenta: mantiene la política de seguridad del sistema.
 */
 
 
