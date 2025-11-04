@@ -44,10 +44,11 @@ describe('storageService', () => {
   });
 
   it('debe usar las claves correctas definidas en STORAGE_KEYS', () => {
-    expect(storageService.keys.books).toBe('libros');
-    expect(storageService.keys.users).toBe('usuarios');
-    expect(storageService.keys.loans).toBe('prestamos');
-    expect(storageService.keys.admin).toBe('adminSession');
+    expect(storageService.keys.books).toBe('books');
+    expect(storageService.keys.users).toBe('users');
+    expect(storageService.keys.loans).toBe('loans');
+    expect(storageService.keys.session).toBe('session');
+    expect(storageService.keys.admin).toBe('admin');
   });
 });
 

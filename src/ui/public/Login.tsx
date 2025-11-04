@@ -2,7 +2,7 @@
 // Email: admin@libra.dev
 // Password: matyxd2006
 import { useState, useEffect } from 'react';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
 
 export function Login() {
@@ -53,7 +53,7 @@ export function Login() {
           )}
 
           {/* Panel de credenciales demo solo en desarrollo - oculto por defecto */}
-          {import.meta.env.DEV && false && (
+          {false ? (
             <div className="alert alert-info mb-4">
               <h6 className="alert-heading">
                 <i className="bi bi-info-circle me-2"></i>Credenciales de Demo
@@ -70,7 +70,7 @@ export function Login() {
                 <li>Password: <code>123456</code></li>
               </ul>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={onSubmit} className="vstack gap-3">
             <div>
@@ -112,7 +112,7 @@ export function Login() {
 /*
 Explicación:
 - Credenciales Admin documentadas en comentarios del código (no visibles en UI de producción).
-- Panel de credenciales demo oculto por defecto (solo visible si import.meta.env.DEV && false).
+- Panel de credenciales demo oculto por defecto (cambiar `false` a `true` para activarlo en DEV).
 - Diseño mejorado con card y alert informativo para credenciales demo.
 - Redirección automática: Admin va a /admin, User a /home.
 - Iconos Bootstrap Icons para mejor UX visual.

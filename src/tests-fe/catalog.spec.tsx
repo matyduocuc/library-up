@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { Catalog } from '../ui/public/Catalog';
 import { seedService } from '../services/seed.service';
 

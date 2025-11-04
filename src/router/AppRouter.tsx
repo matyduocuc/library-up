@@ -39,7 +39,7 @@ import { AdminDashboard } from '../ui/admin/AdminDashboard';
 import { BooksAdmin } from '../ui/admin/BooksAdmin';
 import { UsersAdmin } from '../ui/admin/UsersAdmin';
 import { LoansAdmin } from '../ui/admin/LoansAdmin';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../hooks/useUser';
 
 function AdminGuard() {
   const { user } = useUser();

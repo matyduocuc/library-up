@@ -6,7 +6,6 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { bookService } from '../services/book.service';
-import type { Book } from '../domain/book';
 
 describe('bookService', () => {
   beforeEach(() => {
@@ -24,6 +23,8 @@ describe('bookService', () => {
       title: 'Test Book',
       author: 'Test Author',
       category: 'Test Category',
+      description: 'A test book description',
+      coverUrl: 'https://example.com/test-cover.jpg',
       status: 'disponible'
     });
 
@@ -41,6 +42,8 @@ describe('bookService', () => {
       title: 'Original Title',
       author: 'Original Author',
       category: 'Category',
+      description: 'Original description',
+      coverUrl: 'https://example.com/original-cover.jpg',
       status: 'disponible'
     });
 
@@ -64,6 +67,8 @@ describe('bookService', () => {
       title: 'Test Book',
       author: 'Author',
       category: 'Category',
+      description: 'Test description',
+      coverUrl: 'https://example.com/test-cover.jpg',
       status: 'disponible'
     });
 
@@ -78,6 +83,8 @@ describe('bookService', () => {
       title: 'To Delete',
       author: 'Author',
       category: 'Category',
+      description: 'Description to delete',
+      coverUrl: 'https://example.com/delete-cover.jpg',
       status: 'disponible'
     });
 

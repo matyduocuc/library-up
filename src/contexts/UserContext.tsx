@@ -1,22 +1,15 @@
 /**
- * Contexto de usuario para manejo global de sesión
+ * Provider de contexto de usuario para manejo global de sesión
  * 
  * Inspirado en las mejores prácticas de React para gestión de estado global.
  * Centraliza la lógica de autenticación y sesión en un solo lugar,
  * evitando prop drilling y facilitando el acceso desde cualquier componente.
  */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { userService } from '../services/user.service';
 import type { PublicUser } from '../domain/user';
-
-interface UserContextType {
-  user: PublicUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
-}
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
+import { UserContext, type UserContextType } from './UserContext.types';
 
 interface UserProviderProps {
   children: ReactNode;
@@ -45,27 +38,21 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  const value: UserContextType = { user, login, logout, isLoading };
+
   return (
-    <UserContext.Provider value={{ user, login, logout, isLoading }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );
 };
 
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser debe ser usado dentro de UserProvider');
-  }
-  return context;
-};
-
 /*
 Explicación:
-- UserContext centraliza la gestión de sesión del usuario en toda la aplicación.
+- UserProvider centraliza la gestión de sesión del usuario en toda la aplicación.
 - Evita prop drilling: cualquier componente puede acceder al usuario sin pasar props.
 - El estado se sincroniza con localStorage automáticamente mediante userService.
 - isLoading permite mostrar un loader mientras se verifica la sesión guardada.
-- Siguiendo patrones modernos de React con hooks personalizados (useUser).
+- El contexto y el hook están separados en archivos distintos para cumplir con Fast Refresh.
 */
 

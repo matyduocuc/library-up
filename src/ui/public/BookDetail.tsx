@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { bookService } from '../../services/book.service';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../hooks/useUser';
 import { cartService } from '../../services/cart.service';
 
 export function BookDetail() {

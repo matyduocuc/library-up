@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../hooks/useUser';
 import { cartService } from '../../services/cart.service';
 
 export function Navbar() {

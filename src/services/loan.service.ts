@@ -10,21 +10,21 @@
  * con la clave 'prestamos'. Aquí centralizamos toda esa lógica.
  */
 import { storageService } from './storage.service';
-import type { Loan } from '../domain/loan';
+import type { LegacyLoan } from '../domain/loan';
 import { bookService } from './book.service';
 
 export const loanService = {
   /**
    * Obtiene todos los préstamos.
    */
-  getAll(): Loan[] {
-    return storageService.read<Loan[]>(storageService.keys.loans, []);
+  getAll(): LegacyLoan[] {
+    return storageService.read<LegacyLoan[]>(storageService.keys.loans, []);
   },
 
   /**
    * Guarda el array completo de préstamos.
    */
-  saveAll(loans: Loan[]): void {
+  saveAll(loans: LegacyLoan[]): void {
     storageService.write(storageService.keys.loans, loans);
   },
 
@@ -35,12 +35,12 @@ export const loanService = {
    * @param bookId id del libro
    * @returns préstamo creado
    */
-  request(userId: string, bookId: string): Loan {
+  request(userId: string, bookId: string): LegacyLoan {
     const current = this.getAll();
     const now = new Date();
     const due = new Date(now);
     due.setDate(now.getDate() + 14);
-    const newLoan: Loan = {
+    const newLoan: LegacyLoan = {
       id: crypto.randomUUID(),
       userId,
       bookId,
@@ -60,7 +60,7 @@ export const loanService = {
    * @param loanId - ID del préstamo a aprobar
    * @returns El préstamo actualizado, o null si no se encontró
    */
-  approve(loanId: string): Loan | null {
+  approve(loanId: string): LegacyLoan | null {
     const loans = this.getAll();
     const loan = loans.find(l => l.id === loanId);
     if (!loan || loan.status !== 'pendiente') return null;
@@ -79,7 +79,7 @@ export const loanService = {
    * @param loanId - ID del préstamo a rechazar
    * @returns El préstamo actualizado, o null si no se encontró
    */
-  reject(loanId: string): Loan | null {
+  reject(loanId: string): LegacyLoan | null {
     const loans = this.getAll();
     const loan = loans.find(l => l.id === loanId);
     if (!loan || loan.status !== 'pendiente') return null;
@@ -96,7 +96,7 @@ export const loanService = {
    * @param loanId - ID del préstamo a devolver
    * @returns El préstamo actualizado, o null si no se encontró
    */
-  returnBook(loanId: string): Loan | null {
+  returnBook(loanId: string): LegacyLoan | null {
     const loans = this.getAll();
     const loan = loans.find(l => l.id === loanId);
     if (!loan || loan.status !== 'aprobado') return null;
@@ -113,21 +113,21 @@ export const loanService = {
   /**
    * Obtiene todos los préstamos de un usuario.
    */
-  getByUser(userId: string): Loan[] {
+  getByUser(userId: string): LegacyLoan[] {
     return this.getAll().filter(l => l.userId === userId);
   },
 
   /**
    * Obtiene todos los préstamos de un libro.
    */
-  getByBookId(bookId: string): Loan[] {
+  getByBookId(bookId: string): LegacyLoan[] {
     return this.getAll().filter(l => l.bookId === bookId);
   },
 
   /**
    * Obtiene un préstamo por su ID.
    */
-  getById(loanId: string): Loan | null {
+  getById(loanId: string): LegacyLoan | null {
     const loans = this.getAll();
     return loans.find(l => l.id === loanId) || null;
   },
@@ -135,12 +135,12 @@ export const loanService = {
   /**
    * Crea múltiples préstamos en una sola operación (para carrito)
    */
-  requestMany(userId: string, bookIds: string[]): Loan[] {
+  requestMany(userId: string, bookIds: string[]): LegacyLoan[] {
     const loans = this.getAll();
     const now = new Date();
     const due = new Date(now);
     due.setDate(now.getDate() + 14);
-    const newLoans: Loan[] = bookIds.map(bookId => ({
+    const newLoans: LegacyLoan[] = bookIds.map(bookId => ({
       id: crypto.randomUUID(),
       userId,
       bookId,

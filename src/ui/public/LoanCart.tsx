@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../hooks/useUser';
 import { cartService } from '../../services/cart.service';
 import { bookService } from '../../services/book.service';
 import { loanService } from '../../services/loan.service';

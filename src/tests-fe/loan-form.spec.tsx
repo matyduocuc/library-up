@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { LoanForm } from '../ui/loans/LoanForm';
 import { bookService } from '../services/book.service';
@@ -16,6 +17,7 @@ import { userService } from '../services/user.service';
 import { loanService } from '../services/loan.service';
 import type { Book } from '../domain/book';
 import type { User } from '../domain/user';
+import type { LegacyLoan } from '../domain/loan';
 
 // Mock de los servicios para aislar las pruebas
 vi.mock('../services/book.service');
@@ -28,13 +30,17 @@ describe('LoanForm', () => {
     title: 'Clean Code',
     author: 'Robert C. Martin',
     category: 'Dev',
+    description: 'A book about clean code',
+    coverUrl: 'https://example.com/clean-code.jpg',
     status: 'disponible'
   };
 
   const mockUser: User = {
     id: '1',
     name: 'Juan Pérez',
-    email: 'juan@example.com'
+    email: 'juan@example.com',
+    role: 'User',
+    passwordHash: 'hash123'
   };
 
   beforeEach(() => {
@@ -43,14 +49,15 @@ describe('LoanForm', () => {
     
     // Configurar mocks
     vi.mocked(bookService.getAll).mockReturnValue([mockBook]);
-    vi.mocked(userService.getAll).mockReturnValue([mockUser]);
-    vi.mocked(loanService.create).mockReturnValue({
+    vi.mocked(userService.getAll).mockReturnValue([mockUser] as User[]);
+    vi.mocked(loanService.request).mockReturnValue({
       id: 'loan1',
       userId: '1',
       bookId: '1',
       loanDate: new Date().toISOString(),
+      dueDate: new Date().toISOString(),
       status: 'pendiente'
-    });
+    } as LegacyLoan);
   });
 
   it('debe mostrar el formulario con los campos de libro y usuario', () => {
@@ -96,7 +103,7 @@ describe('LoanForm', () => {
     await user.click(submitButton);
     
     // Verificar que se llamó al servicio de préstamos
-    expect(loanService.create).toHaveBeenCalledWith('1', '1');
+    expect(loanService.request).toHaveBeenCalledWith('1', '1');
     expect(onLoanCreated).toHaveBeenCalled();
   });
 
@@ -109,7 +116,7 @@ describe('LoanForm', () => {
     await user.click(submitButton);
     
     expect(screen.getByText(/Por favor, selecciona un libro y un usuario/i)).toBeInTheDocument();
-    expect(loanService.create).not.toHaveBeenCalled();
+    expect(loanService.request).not.toHaveBeenCalled();
   });
 
   it('debe mostrar un mensaje de éxito después de crear el préstamo', async () => {

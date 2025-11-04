@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { BookCard } from '../ui/books/BookCard';
 import type { Book } from '../domain/book';
 
@@ -18,6 +19,8 @@ describe('BookCard', () => {
     title: 'Clean Code',
     author: 'Robert C. Martin',
     category: 'Desarrollo de Software',
+    description: 'Principios y buenas prácticas para escribir código claro y mantenible.',
+    coverUrl: 'https://example.com/clean-code.jpg',
     status: 'disponible'
   };
 
@@ -42,7 +45,7 @@ describe('BookCard', () => {
   it('debe mostrar el estado del libro como badge', () => {
     render(<BookCard book={mockBook} />);
     
-    const statusBadge = screen.getByText('DISPONIBLE');
+    const statusBadge = screen.getByText('Disponible');
     expect(statusBadge).toBeInTheDocument();
     expect(statusBadge).toHaveClass('badge', 'bg-success');
   });

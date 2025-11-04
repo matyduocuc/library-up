@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { loanService } from '../../services/loan.service';
-import type { Loan } from '../../domain/loan';
+import type { LegacyLoan } from '../../domain/loan';
 
 export function LoansAdmin() {
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loans, setLoans] = useState<LegacyLoan[]>([]);
   const reload = () => setLoans(loanService.getAll());
   useEffect(() => { reload(); }, []);
 
