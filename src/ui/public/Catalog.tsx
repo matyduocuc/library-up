@@ -2,13 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { bookService } from '../../services/book.service';
 import type { Book } from '../../domain/book';
 import { BookCard } from '../books/BookCard';
+import { useUser } from '../../hooks/useUser';
+import { cartService } from '../../services/cart.service';
 
 export function Catalog() {
+  const { user } = useUser();
   const [books, setBooks] = useState<Book[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [cartItems, setCartItems] = useState<Array<{ bookId: string; addedAt: string }>>([]);
 
-  const reload = () => setBooks(bookService.getAll());
+  const reload = () => {
+    setBooks(bookService.getAll());
+    setCartItems(cartService.get());
+  };
 
   useEffect(() => {
     reload();
@@ -77,7 +84,12 @@ export function Catalog() {
       <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
         {filtered.map(b => (
           <div className="col" key={b.id}>
-            <BookCard book={b} />
+            <BookCard 
+              book={b} 
+              isInCart={cartItems.some(item => item.bookId === b.id)}
+              userId={user?.id || null}
+              onCartChange={reload}
+            />
           </div>
         ))}
       </div>
