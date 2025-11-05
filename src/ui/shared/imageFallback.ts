@@ -23,3 +23,4 @@ export function coverCandidates(url: string): string[] {
   return [url, withImgFallback(url)];
 }
 
+

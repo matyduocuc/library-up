@@ -53,7 +53,8 @@ export function Login() {
           )}
 
           {/* Panel de credenciales demo solo en desarrollo - oculto por defecto */}
-          {false ? (
+          {/* Para activarlo en desarrollo, descomentar el bloque siguiente y cambiar false a true */}
+          {/* {import.meta.env.DEV && (
             <div className="alert alert-info mb-4">
               <h6 className="alert-heading">
                 <i className="bi bi-info-circle me-2"></i>Credenciales de Demo
@@ -70,7 +71,7 @@ export function Login() {
                 <li>Password: <code>123456</code></li>
               </ul>
             </div>
-          ) : null}
+          )} */}
 
           <form onSubmit={onSubmit} className="vstack gap-3">
             <div>

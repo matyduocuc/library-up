@@ -2,10 +2,10 @@
  * Componente BookCard (Tarjeta de libro)
  * 
  * Muestra la información de un libro individual en formato de tarjeta Bootstrap.
- * Es reutilizable y puede usarse tanto en la vista de usuario como en la de admin.
  */
 import type { Book } from '../../domain/book';
 import { Link } from 'react-router-dom';
+import { resolveCover, FALLBACK_COVER, withCacheBuster } from '../shared/getCover';
 
 interface BookCardProps {
   book: Book;
@@ -14,15 +14,22 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, onSelect, showActions = false }: BookCardProps) {
+  const cover = resolveCover(book);
+  const src = cover.startsWith("/img/") ? cover : withCacheBuster(cover);
+  
   const cardContent = (
     <div className="card h-100 shadow-sm">
       <img
-        src={book.coverUrl || 'https://picsum.photos/seed/fallback/600/900'}
+        src={src}
         alt={`Portada de ${book.title}`}
         className="card-img-top"
         loading="lazy"
+        referrerPolicy="no-referrer"
         onError={(e) => {
-          (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback/600/900';
+          const img = e.currentTarget;
+          if (img.src !== FALLBACK_COVER) {
+            img.src = FALLBACK_COVER;
+          }
         }}
         style={{ objectFit: 'cover', height: 260 }}
       />
@@ -66,15 +73,3 @@ export function BookCard({ book, onSelect, showActions = false }: BookCardProps)
     </Link>
   );
 }
-
-/*
-Explicación:
-- Consistencia visual: coverUrl y description ahora son requeridos en el modelo, mejorando la riqueza de las tarjetas.
-- Fallback en onError evita "rotas" visuales si la imagen no carga (CORS/HTTPS).
-- object-fit: cover mantiene estética con altura fija (height: 260).
-- La descripción se muestra con clamp-2 para limitar a 2 líneas y mantener diseño limpio.
-- Al hacer click en la card, navega a /book/:id para ver detalles completos.
-- Los datos nuevos se reflejan automáticamente sin reload gracias al refresco en Catalog.
-*/
-
-

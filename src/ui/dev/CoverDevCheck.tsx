@@ -53,13 +53,14 @@ export function CoverDevCheck({ books }: CoverDevCheckProps) {
     <div className="alert alert-info">
       <strong>Cover check:</strong>{' '}
       {checking ? (
-        '⏳ Verificando...'
+        ' Verificando...'
       ) : bad.length === 0 ? (
-        <span className="text-success">✅ Todas las portadas cargan correctamente</span>
+        <span className="text-success"> Todas las portadas cargan correctamente</span>
       ) : (
-        <span className="text-danger">❌ Portadas rotas: {bad.join(', ')}</span>
+        <span className="text-danger"> Portadas rotas: {bad.join(', ')}</span>
       )}
     </div>
   );
 }
+
 

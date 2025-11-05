@@ -6,7 +6,8 @@
  */
 import type { Book } from '../domain/book';
 import type { Loan } from '../domain/loan';
-import { LOAN_DAYS, MAX_ACTIVE_LOANS_PER_USER, LoanErrorCode, type LoanResult } from '../domain/loan';
+import { LoanStatus, LOAN_DAYS, MAX_ACTIVE_LOANS_PER_USER, LoanErrorCode, type LoanResult } from '../domain/loan';
+import { BookStatus } from '../domain/book';
 import { userService } from './user.service';
 import { storageService } from './storage.service';
 
@@ -81,7 +82,8 @@ export const loanValidationService = {
       };
     }
 
-    if (book.status !== 'disponible') {
+    const bookStatus = book.status as string;
+    if (bookStatus !== BookStatus.DISPONIBLE && bookStatus !== 'disponible') {
       return {
         ok: false,
         code: LoanErrorCode.BOOK_NOT_AVAILABLE,
@@ -90,7 +92,10 @@ export const loanValidationService = {
     }
 
     const loans = this.getLoans();
-    const activeCount = loans.filter(l => l.userId === session.id && l.status === 'active').length;
+    const activeCount = loans.filter(l => {
+      const loanStatus = l.status as string;
+      return l.userId === session.id && (loanStatus === LoanStatus.ACTIVE || loanStatus === 'active');
+    }).length;
     if (activeCount >= MAX_ACTIVE_LOANS_PER_USER) {
       return {
         ok: false,
@@ -99,9 +104,12 @@ export const loanValidationService = {
       };
     }
 
-    const duplicate = loans.find(
-      l => l.userId === session.id && l.bookId === bookId && l.status === 'active'
-    );
+    const duplicate = loans.find(l => {
+      const loanStatus = l.status as string;
+      return l.userId === session.id && 
+             l.bookId === bookId && 
+             (loanStatus === LoanStatus.ACTIVE || loanStatus === 'active');
+    });
     if (duplicate) {
       return {
         ok: false,
@@ -116,9 +124,10 @@ export const loanValidationService = {
       id: crypto.randomUUID(),
       userId: session.id,
       bookId,
+      loanDate: start.toISOString(),
       startDate: start.toISOString(),
       dueDate: due.toISOString(),
-      status: 'active'
+      status: LoanStatus.ACTIVE
     };
 
     loans.push(loan);
@@ -126,7 +135,7 @@ export const loanValidationService = {
 
     const bookIndex = books.findIndex(b => b.id === bookId);
     if (bookIndex !== -1) {
-      books[bookIndex] = { ...books[bookIndex], status: 'prestado' };
+      books[bookIndex] = { ...books[bookIndex], status: BookStatus.PRESTADO };
       this.saveBooks(books);
     }
 
@@ -156,7 +165,9 @@ export const loanValidationService = {
     }
 
     const loan = loans[loanIndex];
-    if (loan.status !== 'active') {
+    const loanStatus = loan.status as string;
+    const isActive = loanStatus === LoanStatus.ACTIVE || loanStatus === 'active';
+    if (!isActive) {
       return {
         ok: false,
         code: LoanErrorCode.LOAN_ALREADY_RETURNED,
@@ -164,7 +175,7 @@ export const loanValidationService = {
       };
     }
 
-    loan.status = 'returned';
+    loan.status = LoanStatus.RETURNED;
     loan.returnDate = new Date().toISOString();
     loans[loanIndex] = loan;
     this.saveLoans(loans);
@@ -172,7 +183,7 @@ export const loanValidationService = {
     const books = this.getBooks();
     const bookIndex = books.findIndex(b => b.id === loan.bookId);
     if (bookIndex !== -1) {
-      books[bookIndex] = { ...books[bookIndex], status: 'disponible' };
+      books[bookIndex] = { ...books[bookIndex], status: BookStatus.DISPONIBLE };
       this.saveBooks(books);
     }
 

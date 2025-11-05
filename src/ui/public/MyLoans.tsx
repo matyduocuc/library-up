@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../hooks/useUser';
 import { loanService } from '../../services/loan.service';
 import { bookService } from '../../services/book.service';
-import type { Loan } from '../../domain/loan';
+import type { LegacyLoan } from '../../domain/loan';
 import type { Book } from '../../domain/book';
 
-interface LoanWithBook extends Loan {
+interface LoanWithBook extends LegacyLoan {
   book: Book | null;
 }
 
@@ -21,10 +21,13 @@ export function MyLoans() {
       return;
     }
     const userLoans = loanService.getByUser(user.id);
-    const loansWithBooks: LoanWithBook[] = userLoans.map(loan => ({
-      ...loan,
-      book: bookService.getById(loan.bookId)
-    }));
+    const loansWithBooks: LoanWithBook[] = userLoans.map(loan => {
+      const book = bookService.getById(loan.bookId);
+      return {
+        ...loan,
+        book: book || null
+      };
+    });
     setLoans(loansWithBooks);
   }, [user, navigate]);
 

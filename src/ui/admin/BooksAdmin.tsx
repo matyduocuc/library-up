@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { bookService } from '../../services/book.service';
 import type { Book } from '../../domain/book';
+import { resolveCover, FALLBACK_COVER, withCacheBuster } from '../shared/getCover';
 
-const categories = ['Programación', 'Base de Datos', 'Manga', 'Novela', 'Ciencia', 'Historia', 'Biografía', 'Poesía'];
+const categories = ['Programación', 'Base de Datos', 'Novela', 'Ciencia', 'Historia', 'Biografía', 'Poesía', 'Sistemas', 'Redes', 'Arquitectura'];
 
 const empty: Omit<Book, 'id'> = {
   title: '',
@@ -30,7 +31,7 @@ export function BooksAdmin() {
       form.category.trim().length > 0 &&
       form.description.trim().length >= 30 &&
       form.description.trim().length <= 280 &&
-      /^https?:\/\//.test(form.coverUrl.trim())
+      form.coverUrl.trim().length > 0
     );
   };
 
@@ -220,31 +221,36 @@ export function BooksAdmin() {
               <div className="mb-2">
                 <label className="form-label">URL de Portada <span className="text-danger">*</span></label>
                 <input 
-                  type="url"
-                  className={`form-control ${form.coverUrl.trim().length > 0 && !/^https?:\/\//.test(form.coverUrl.trim()) ? 'is-invalid' : ''}`}
+                  type="text"
+                  className="form-control"
                   value={form.coverUrl} 
                   onChange={e=>setForm(f=>({...f, coverUrl:e.target.value}))} 
                   required 
-                  placeholder="https://ejemplo.com/imagen.jpg"
+                  placeholder="/img/books/nombre-archivo.jpg o https://..."
                 />
-                {form.coverUrl.trim().length > 0 && !/^https?:\/\//.test(form.coverUrl.trim()) && (
-                  <div className="invalid-feedback">Debe ser una URL válida (http:// o https://)</div>
-                )}
+                <small className="text-muted">Usa ruta local (/img/books/...) o URL completa</small>
               </div>
-              {form.coverUrl && /^https?:\/\//.test(form.coverUrl.trim()) && (
-                <div className="mb-2">
-                  <label className="form-label">Vista previa</label>
-                  <img
-                    src={form.coverUrl}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback/600/900';
-                    }}
-                    className="img-fluid rounded border"
-                    style={{maxHeight: 180, objectFit: 'cover', width: '100%'}}
-                    alt="Preview"
-                  />
-                </div>
-              )}
+              {form.coverUrl && (() => {
+                const cover = resolveCover({ coverUrl: form.coverUrl, title: form.title });
+                const src = cover.startsWith("/img/") ? cover : withCacheBuster(cover);
+                return (
+                  <div className="mb-2">
+                    <label className="form-label">Vista previa</label>
+                    <img
+                      src={src}
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        if (img.src !== FALLBACK_COVER) {
+                          img.src = FALLBACK_COVER;
+                        }
+                      }}
+                      className="img-fluid rounded border"
+                      style={{maxHeight: 180, objectFit: 'cover', width: '100%'}}
+                      alt="Preview"
+                    />
+                  </div>
+                );
+              })()}
               <div className="mb-2">
                 <label className="form-label">URL de Banner (opcional)</label>
                 <input 

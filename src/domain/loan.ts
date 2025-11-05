@@ -4,16 +4,29 @@
  * Representa un préstamo de un libro a un usuario.
  * Incluye validaciones y constantes para el servicio de préstamos.
  */
-export type LoanStatus = 'active' | 'returned';
+
+/**
+ * Estados de préstamo (sistema nuevo)
+ */
+export const LoanStatus = {
+  ACTIVE: 'active',
+  RETURNED: 'returned'
+} as const;
+
+/**
+ * Tipo de estado del préstamo (compatibilidad)
+ */
+export type LoanStatusType = typeof LoanStatus[keyof typeof LoanStatus] | 'active' | 'returned';
 
 export interface Loan {
   id: string;
   userId: string;
   bookId: string;
-  startDate: string;   // ISO string
-  dueDate: string;     // ISO string
-  returnDate?: string; // ISO string (opcional)
-  status: LoanStatus;
+  loanDate: string;   // ISO string - fecha de préstamo (compatibilidad con LegacyLoan)
+  startDate: string;   // ISO string - fecha de inicio del préstamo (alias de loanDate)
+  dueDate: string;     // ISO string - fecha de devolución esperada
+  returnDate?: string; // ISO string (opcional) - fecha real de devolución
+  status: LoanStatusType;
 }
 
 // Constantes de validación
@@ -42,15 +55,15 @@ export type LoanResult = LoanSuccess | LoanFail;
 export type LegacyLoanStatus = 'pendiente' | 'aprobado' | 'rechazado' | 'devuelto';
 
 /**
- * @deprecated Usar Loan con status 'active' | 'returned' en su lugar
+ * @deprecated Usar Loan con status LoanStatus.ACTIVE | LoanStatus.RETURNED en su lugar
  * Mantenido para compatibilidad con código existente
  */
 export interface LegacyLoan {
   id: string;
   userId: string;
   bookId: string;
-  loanDate: string;
-  dueDate: string;
-  returnDate?: string;
+  loanDate: string;  // ISO string - fecha de préstamo (legacy)
+  dueDate: string;  // ISO string - fecha de devolución esperada
+  returnDate?: string; // ISO string (opcional) - fecha real de devolución
   status: LegacyLoanStatus;
 }

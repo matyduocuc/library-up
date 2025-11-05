@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { loanService } from '../../services/loan.service';
 import { bookService } from '../../services/book.service';
-import type { Loan } from '../../domain/loan';
+import type { LegacyLoan } from '../../domain/loan';
 import type { Book } from '../../domain/book';
+
+interface LoanWithBook extends LegacyLoan {
+  book: Book | null;
+}
 
 export function Receipt() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [loans, setLoans] = useState<(Loan & { book: Book | null })[]>([]);
+  const [loans, setLoans] = useState<LoanWithBook[]>([]);
 
   useEffect(() => {
     const loanIds = location.state?.loanIds as string[] | undefined;
@@ -20,8 +24,8 @@ export function Receipt() {
       const loan = loanService.getById(id);
       if (!loan) return null;
       const book = bookService.getById(loan.bookId);
-      return { ...loan, book };
-    }).filter((l): l is Loan & { book: Book | null } => l !== null);
+      return { ...loan, book: book || null };
+    }).filter((l): l is LoanWithBook => l !== null);
     setLoans(loanData);
   }, [location.state, navigate]);
 

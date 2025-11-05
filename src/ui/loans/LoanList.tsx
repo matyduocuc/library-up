@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { loanService } from '../../services/loan.service';
 import { bookService } from '../../services/book.service';
 import { userService } from '../../services/user.service';
-import type { Loan } from '../../domain/loan';
+import type { LegacyLoan } from '../../domain/loan';
 
 interface LoanListProps {
   isAdmin?: boolean;
@@ -16,7 +16,7 @@ interface LoanListProps {
 }
 
 export function LoanList({ isAdmin = false, userId }: LoanListProps) {
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loans, setLoans] = useState<LegacyLoan[]>([]);
 
   useEffect(() => {
     loadLoans();
@@ -24,7 +24,7 @@ export function LoanList({ isAdmin = false, userId }: LoanListProps) {
 
   const loadLoans = () => {
     const allLoans = userId 
-      ? loanService.getByUserId(userId)
+      ? loanService.getByUser(userId)
       : loanService.getAll();
     setLoans(allLoans);
   };
@@ -40,17 +40,18 @@ export function LoanList({ isAdmin = false, userId }: LoanListProps) {
   };
 
   const handleReturn = (loanId: string) => {
-    loanService.return(loanId);
+    loanService.returnBook(loanId);
     loadLoans();
   };
 
-  const getStatusBadge = (status: Loan['status']) => {
-    const classes = {
+  const getStatusBadge = (status: LegacyLoan['status']) => {
+    const classes: Record<string, string> = {
       pendiente: 'bg-warning',
       aprobado: 'bg-success',
-      rechazado: 'bg-danger'
+      rechazado: 'bg-danger',
+      devuelto: 'bg-secondary'
     };
-    return <span className={`badge ${classes[status]}`}>{status.toUpperCase()}</span>;
+    return <span className={`badge ${classes[status] || 'bg-secondary'}`}>{status.toUpperCase()}</span>;
   };
 
   if (loans.length === 0) {
@@ -77,7 +78,7 @@ export function LoanList({ isAdmin = false, userId }: LoanListProps) {
         <tbody>
           {loans.map(loan => {
             const book = bookService.getById(loan.bookId);
-            const user = userService.getById(loan.userId);
+            const user = userService.getAll().find(u => u.id === loan.userId);
             
             return (
               <tr key={loan.id}>

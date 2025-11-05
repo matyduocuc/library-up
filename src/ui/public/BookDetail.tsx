@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { bookService } from '../../services/book.service';
 import { useUser } from '../../hooks/useUser';
 import { cartService } from '../../services/cart.service';
+import { resolveCover, FALLBACK_COVER, withCacheBuster } from '../shared/getCover';
 
 export function BookDetail() {
   const { id = '' } = useParams();
@@ -23,27 +24,25 @@ export function BookDetail() {
     navigate('/cart');
   };
 
+  const cover = resolveCover(book);
+  const src = cover.startsWith("/img/") ? cover : withCacheBuster(cover);
+
   return (
     <div className="container py-4">
-      {book.bannerUrl && (
-        <img
-          src={book.bannerUrl}
-          alt="Banner"
-          className="img-fluid rounded-3 shadow-sm mb-4"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback-banner/1200/300';
-          }}
-        />
-      )}
       <div className="row g-4">
         <div className="col-12 col-md-4">
           <img
-            src={book.coverUrl || 'https://picsum.photos/seed/fallback/600/900'}
+            src={src}
             alt={book.title}
             className="img-fluid rounded-3 shadow-lg"
+            loading="lazy"
+            referrerPolicy="no-referrer"
             style={{ objectFit: 'cover', width: '100%', maxHeight: 500 }}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = 'https://picsum.photos/seed/fallback/600/900';
+              const img = e.currentTarget;
+              if (img.src !== FALLBACK_COVER) {
+                img.src = FALLBACK_COVER;
+              }
             }}
           />
         </div>
@@ -89,15 +88,3 @@ export function BookDetail() {
     </div>
   );
 }
-
-/*
-Explicación:
-- Muestra todos los campos enriquecidos: banner (si existe), portada, autor, categoría y descripción completa.
-- Fallback en imágenes evita "rotas" visuales si la URL falla (CORS/HTTPS).
-- object-fit: cover mantiene proporciones en portada grande.
-- El botón "Añadir al carrito de préstamo" valida sesión: si no hay sesión, navega a /login.
-- Separar "carrito" de "confirmación" permite revisar múltiples libros y generar boleta única.
-- No hay préstamo sin cuenta: mantiene la política de seguridad del sistema.
-*/
-
-

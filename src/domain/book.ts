@@ -3,7 +3,20 @@
  * 
  * Representa un libro en el sistema de biblioteca.
  */
-export type BookStatus = 'disponible' | 'prestado';
+
+/**
+ * Estados posibles de un libro
+ */
+export const BookStatus = {
+  DISPONIBLE: 'disponible',
+  PRESTADO: 'prestado',
+  RESERVADO: 'reservado'
+} as const;
+
+/**
+ * Tipo de estado del libro (compatibilidad con código existente)
+ */
+export type BookStatusType = typeof BookStatus[keyof typeof BookStatus] | 'disponible' | 'prestado' | 'reservado';
 
 export interface Book {
   id: string;
@@ -13,5 +26,5 @@ export interface Book {
   description: string;
   coverUrl: string;
   bannerUrl?: string;
-  status: BookStatus;
+  status: BookStatusType;
 }
