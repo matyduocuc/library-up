@@ -5,10 +5,12 @@
  * - Carga de préstamos
  * - Estados de loading y error
  * - Integración con libros
+ * - Mapeo entre PrestamoDTO (backend) y LegacyLoan (frontend)
  */
 import { useState, useEffect } from 'react';
 import { loansApi } from '../api/loansApi';
 import { ApiError } from '../api/httpClient';
+import { mapPrestamoDTOArrayToLegacyLoans } from '../utils/loanMapper';
 import { bookService } from '../services/book.service';
 import type { LegacyLoan } from '../domain/loan';
 import type { Book } from '../domain/book';
@@ -39,11 +41,20 @@ export function useUserLoans(userId: string | undefined): UseUserLoansResult {
     setError(null);
 
     try {
+      // Convertir string ID a number para la API
+      const numericUserId = parseInt(userId, 10);
+      if (isNaN(numericUserId)) {
+        throw new Error('ID de usuario inválido');
+      }
+
       // Intentar primero con la API
-      const userLoans = await loansApi.getByUser(userId);
+      const prestamosDTO = await loansApi.getByUser(numericUserId);
+      
+      // Mapear PrestamoDTO[] a LegacyLoan[]
+      const legacyLoans = mapPrestamoDTOArrayToLegacyLoans(prestamosDTO);
       
       // Enriquecer con información de libros
-      const loansWithBooks: LoanWithBook[] = userLoans.map(loan => {
+      const loansWithBooks: LoanWithBook[] = legacyLoans.map(loan => {
         const book = bookService.getById(loan.bookId);
         return {
           ...loan,

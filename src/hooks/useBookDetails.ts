@@ -5,10 +5,12 @@
  * - Carga del libro
  * - Estados de loading y error
  * - Reintentos opcionales
+ * - Mapeo entre LibroDTO (backend) y Book (frontend)
  */
 import { useState, useEffect } from 'react';
 import { booksApi } from '../api/booksApi';
 import { ApiError } from '../api/httpClient';
+import { mapLibroDTOToBook } from '../utils/bookMapper';
 import type { Book } from '../domain/book';
 
 interface UseBookDetailsResult {
@@ -34,10 +36,18 @@ export function useBookDetails(bookId: string | undefined): UseBookDetailsResult
     setError(null);
 
     try {
+      // Convertir string ID a number para la API
+      const numericId = parseInt(bookId, 10);
+      if (isNaN(numericId)) {
+        throw new Error('ID de libro inválido');
+      }
+
       // Intentar primero con la API
-      const bookData = await booksApi.getById(bookId);
-      if (bookData) {
-        setBook(bookData);
+      const libroDTO = await booksApi.getById(numericId);
+      if (libroDTO) {
+        // Mapear LibroDTO a Book
+        const mappedBook = mapLibroDTOToBook(libroDTO);
+        setBook(mappedBook);
       } else {
         // Fallback a localStorage si la API retorna null
         const { bookService } = await import('../services/book.service');

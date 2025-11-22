@@ -9,9 +9,14 @@
 
 // URLs base de microservicios (configurables por .env)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const BOOKS_API_URL = import.meta.env.VITE_BOOKS_API_URL || `${API_BASE_URL}/api/books`;
-const USERS_API_URL = import.meta.env.VITE_USERS_API_URL || `${API_BASE_URL}/api/users`;
-const LOANS_API_URL = import.meta.env.VITE_LOANS_API_URL || `${API_BASE_URL}/api/loans`;
+const BOOKS_API_URL = import.meta.env.VITE_BOOKS_API_URL || 'http://localhost:8082/api/libros';
+const USERS_API_URL = import.meta.env.VITE_USERS_API_URL || 'http://localhost:8081/api/usuarios';
+const LOANS_API_URL = import.meta.env.VITE_LOANS_API_URL || 'http://localhost:8083/api/v1/prestamos';
+const REPORTS_API_URL = import.meta.env.VITE_REPORTS_API_URL || 'http://localhost:8085/api/informes';
+
+// URLs para microservicios de Cursos y Estudiantes
+const COURSES_API_URL = import.meta.env.VITE_COURSES_API_URL || `${API_BASE_URL}/api/v1/course`;
+const STUDENTS_API_URL = import.meta.env.VITE_STUDENTS_API_URL || `${API_BASE_URL}/api/v1/student`;
 
 /**
  * Respuesta estándar de la API
@@ -113,13 +118,26 @@ async function request<T>(
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
       
-      // Si la respuesta tiene formato estándar { success, data, message }
+      // Manejar formato ApiResponse con 'ok' (microservicios Biblioteca)
+      if (typeof data === 'object' && data !== null && 'ok' in data) {
+        const apiResponse = data as { ok: boolean; data?: T; message?: string; statusCode?: number };
+        if (apiResponse.ok && apiResponse.data !== undefined) {
+          return apiResponse.data;
+        } else {
+          throw new ApiError(
+            apiResponse.message || 'Error en la respuesta del servidor',
+            apiResponse.statusCode || response.status,
+            response.statusText
+          );
+        }
+      }
+      
+      // Manejar formato ApiResponse con 'success' (otros microservicios)
       if (typeof data === 'object' && data !== null && 'success' in data) {
         const apiResponse = data as ApiResponse<T>;
         if (apiResponse.success && apiResponse.data !== undefined) {
           return apiResponse.data;
         } else {
-          // Si success es false, lanzar error
           throw new ApiError(
             apiResponse.message || apiResponse.error || 'Error en la respuesta del servidor',
             response.status,
@@ -194,11 +212,24 @@ export const httpClient = {
     return request<T>(url, { method: 'DELETE' });
   },
 
+  /**
+   * PATCH request
+   */
+  patch: <T>(url: string, body: unknown): Promise<T> => {
+    return request<T>(url, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
   // URLs exportadas para uso en otros módulos
   urls: {
     books: BOOKS_API_URL,
     users: USERS_API_URL,
     loans: LOANS_API_URL,
+    reports: REPORTS_API_URL,
+    courses: COURSES_API_URL,
+    students: STUDENTS_API_URL,
   },
 };
 

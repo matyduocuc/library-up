@@ -1,42 +1,37 @@
 /**
  * API client para microservicio de Préstamos
+ * Conectado a: http://localhost:8083/api/v1/prestamos
+ * NOTA: Verificar el puerto correcto (puede ser 8082 o 8083)
  */
-import { httpClient, type ApiResponse, ApiError } from './httpClient';
-import type { LegacyLoan } from '../domain/loan';
+import { httpClient, ApiError } from './httpClient';
 
 // Re-exportar ApiError para uso en hooks
 export { ApiError } from './httpClient';
 
-export interface CreateLoanDto {
-  userId: string;
-  bookId: string;
+export interface PrestamoDTO {
+  id: number;
+  usuarioId: number;
+  ejemplarId: number;
+  fechaPrestamo?: string;
+  fechaVencimiento?: string;
+  fechaDevolucion?: string;
+  estado: string;
+  renovaciones?: number;
 }
 
-export interface CreateManyLoansDto {
-  userId: string;
-  bookIds: string[];
+export interface CreatePrestamoDto {
+  usuarioId: number;
+  ejemplarId: number;
 }
 
 export const loansApi = {
   /**
-   * Obtiene todos los préstamos (solo admin)
-   */
-  async getAll(): Promise<LegacyLoan[]> {
-    const response = await httpClient.get<ApiResponse<LegacyLoan[]>>(
-      `${httpClient.urls.loans}`
-    );
-    return response.data || [];
-  },
-
-  /**
    * Obtiene un préstamo por ID
    */
-  async getById(id: string): Promise<LegacyLoan | null> {
+  async getById(id: number): Promise<PrestamoDTO | null> {
     try {
-      const response = await httpClient.get<ApiResponse<LegacyLoan>>(
-        `${httpClient.urls.loans}/${id}`
-      );
-      return response.data || null;
+      const data = await httpClient.get<PrestamoDTO>(`${httpClient.urls.loans}/${id}`);
+      return data || null;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         return null;
@@ -48,88 +43,37 @@ export const loansApi = {
   /**
    * Obtiene préstamos de un usuario
    */
-  async getByUser(userId: string): Promise<LegacyLoan[]> {
-    const response = await httpClient.get<ApiResponse<LegacyLoan[]>>(
-      `${httpClient.urls.loans}/user/${userId}`
-    );
-    return response.data || [];
+  async getByUser(usuarioId: number): Promise<PrestamoDTO[]> {
+    const data = await httpClient.get<PrestamoDTO[]>(`${httpClient.urls.loans}/usuario/${usuarioId}`);
+    return Array.isArray(data) ? data : [];
   },
 
   /**
-   * Obtiene préstamos de un libro
+   * Obtiene préstamos por estado
    */
-  async getByBook(bookId: string): Promise<LegacyLoan[]> {
-    const response = await httpClient.get<ApiResponse<LegacyLoan[]>>(
-      `${httpClient.urls.loans}/book/${bookId}`
-    );
-    return response.data || [];
+  async getByEstado(estado: string): Promise<PrestamoDTO[]> {
+    const data = await httpClient.get<PrestamoDTO[]>(`${httpClient.urls.loans}/estado/${encodeURIComponent(estado)}`);
+    return Array.isArray(data) ? data : [];
   },
 
   /**
-   * Crea una solicitud de préstamo
+   * Crea un nuevo préstamo
    */
-  async create(loanData: CreateLoanDto): Promise<LegacyLoan> {
-    const response = await httpClient.post<ApiResponse<LegacyLoan>>(
-      `${httpClient.urls.loans}`,
-      loanData
-    );
-    if (!response.data) {
-      throw new Error('No se recibieron datos del servidor');
-    }
-    return response.data;
+  async create(loanData: CreatePrestamoDto): Promise<PrestamoDTO> {
+    return await httpClient.post<PrestamoDTO>(`${httpClient.urls.loans}`, loanData);
   },
 
   /**
-   * Crea múltiples préstamos (para carrito)
+   * Renueva un préstamo
    */
-  async createMany(loanData: CreateManyLoansDto): Promise<LegacyLoan[]> {
-    const response = await httpClient.post<ApiResponse<LegacyLoan[]>>(
-      `${httpClient.urls.loans}/many`,
-      loanData
-    );
-    return response.data || [];
+  async renew(id: number): Promise<PrestamoDTO> {
+    return await httpClient.post<PrestamoDTO>(`${httpClient.urls.loans}/${id}/renovar`, {});
   },
 
   /**
-   * Aprueba un préstamo (solo admin)
+   * Devuelve un préstamo
    */
-  async approve(id: string): Promise<LegacyLoan> {
-    const response = await httpClient.put<ApiResponse<LegacyLoan>>(
-      `${httpClient.urls.loans}/${id}/approve`,
-      {}
-    );
-    if (!response.data) {
-      throw new Error('No se recibieron datos del servidor');
-    }
-    return response.data;
-  },
-
-  /**
-   * Rechaza un préstamo (solo admin)
-   */
-  async reject(id: string): Promise<LegacyLoan> {
-    const response = await httpClient.put<ApiResponse<LegacyLoan>>(
-      `${httpClient.urls.loans}/${id}/reject`,
-      {}
-    );
-    if (!response.data) {
-      throw new Error('No se recibieron datos del servidor');
-    }
-    return response.data;
-  },
-
-  /**
-   * Marca un préstamo como devuelto
-   */
-  async returnBook(id: string): Promise<LegacyLoan> {
-    const response = await httpClient.put<ApiResponse<LegacyLoan>>(
-      `${httpClient.urls.loans}/${id}/return`,
-      {}
-    );
-    if (!response.data) {
-      throw new Error('No se recibieron datos del servidor');
-    }
-    return response.data;
+  async return(id: number): Promise<PrestamoDTO> {
+    return await httpClient.post<PrestamoDTO>(`${httpClient.urls.loans}/${id}/devolver`, {});
   },
 };
-

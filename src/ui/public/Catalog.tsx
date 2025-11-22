@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { booksApi } from '../../api/booksApi';
 import { ApiError } from '../../api/httpClient';
+import { mapLibroDTOArrayToBooks } from '../../utils/bookMapper';
 import { bookService } from '../../services/book.service';
 import type { Book } from '../../domain/book';
 import { BookCard } from '../books/BookCard';
@@ -24,8 +25,10 @@ export function Catalog() {
       setError(null);
       
       // Intentar primero con la API
-      const apiBooks = await booksApi.getAll();
-      setBooks(apiBooks);
+      const librosDTO = await booksApi.getAll();
+      // Mapear LibroDTO[] a Book[]
+      const mappedBooks = mapLibroDTOArrayToBooks(librosDTO);
+      setBooks(mappedBooks);
     } catch (err) {
       // Fallback a localStorage si la API falla
       try {
