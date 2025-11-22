@@ -39,6 +39,7 @@ import { AdminDashboard } from '../ui/admin/AdminDashboard';
 import { BooksAdmin } from '../ui/admin/BooksAdmin';
 import { UsersAdmin } from '../ui/admin/UsersAdmin';
 import { LoansAdmin } from '../ui/admin/LoansAdmin';
+import { NotFoundPage } from '../ui/shared/NotFoundPage';
 import { useUser } from '../hooks/useUser';
 
 function AdminGuard() {
@@ -89,7 +90,7 @@ export function AppRouter() {
           <Route path="loans" element={<LoansAdmin />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

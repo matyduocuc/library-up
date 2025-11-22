@@ -280,6 +280,256 @@ Este grid se adapta automáticamente:
 - **Tablet grande**: 3 columnas
 - **Desktop**: 4 columnas
 
+### 4.5 Gestión de Estado Global con UserContext
+
+#### ¿Qué es UserContext y por qué lo utilizamos?
+
+`UserContext` es un contexto global de React que centraliza la información del usuario en toda la aplicación. En lugar de pasar propiedades de usuario de un componente a otro mediante props (prop drilling), UserContext permite mantener la información del usuario en un lugar centralizado y accesible desde cualquier componente que lo necesite.
+
+**Propósito principal de UserContext:**
+
+1. **Autenticación**: Mantener el estado de sesión del usuario (si está logueado o no) de forma global
+2. **Acceso global al usuario**: Acceder a la información del usuario, como rol (usuario, admin) y estado (activo, bloqueado, etc.), en toda la aplicación sin tener que pasar estos datos como props entre cada componente
+3. **Control de acceso**: Restringir ciertas funcionalidades de la aplicación basadas en el rol del usuario (por ejemplo, un administrador tiene acceso al panel de gestión, pero un usuario regular no)
+
+#### Implementación de UserContext
+
+El UserContext se configura en dos archivos principales:
+
+**1. Definición del Contexto (`UserContext.types.ts`):**
+
+```typescript
+// src/contexts/UserContext.types.ts
+import { createContext } from 'react';
+import type { PublicUser } from '../domain/user';
+
+export interface UserContextType {
+  user: PublicUser | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  isLoading: boolean;
+}
+
+export const UserContext = createContext<UserContextType | undefined>(undefined);
+```
+
+**2. Provider del Contexto (`UserContext.tsx`):**
+
+```typescript
+// src/contexts/UserContext.tsx
+export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<PublicUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Cargar sesión al iniciar
+  useEffect(() => {
+    const savedUser = userService.getSession();
+    if (savedUser) {
+      setUser(savedUser);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const loggedUser = await userService.login(email, password);
+    setUser(loggedUser);
+  };
+
+  const logout = () => {
+    userService.logout();
+    setUser(null);
+  };
+
+  const value: UserContextType = { user, login, logout, isLoading };
+
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+```
+
+**3. Hook personalizado para consumir el contexto (`useUser.ts`):**
+
+```typescript
+// src/hooks/useUser.ts
+export const useUser = (): UserContextType => {
+  const context = useContext(UserContext);
+  if (context === undefined) {
+    throw new Error('useUser debe ser usado dentro de UserProvider');
+  }
+  return context;
+};
+```
+
+**4. Integración en la aplicación (`main.tsx`):**
+
+```typescript
+// src/main.tsx
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <UserProvider>
+      <AppRouter />
+    </UserProvider>
+  </StrictMode>
+)
+```
+
+#### ¿Cómo funciona UserContext en el sistema?
+
+El flujo de funcionamiento de UserContext sigue estos pasos:
+
+1. **Crear el contexto**: Se define el `UserContext` con el tipo `UserContextType` que incluye el usuario actual, funciones de login/logout y estado de carga
+
+2. **Proveer el contexto**: El `UserProvider` envuelve toda la aplicación en `main.tsx`, proporcionando el contexto a todos los componentes hijos
+
+3. **Consumir el contexto**: Cualquier componente puede acceder al contexto mediante el hook `useUser()`:
+
+```typescript
+// Ejemplo de uso en cualquier componente
+import { useUser } from '../../hooks/useUser';
+
+export function Catalog() {
+  const { user } = useUser();
+  // Ahora podemos usar user en cualquier parte del componente
+}
+```
+
+#### ¿Cómo mejora la experiencia del usuario?
+
+UserContext mejora la experiencia del usuario de varias maneras:
+
+1. **Facilidad de acceso a la información del usuario**: Cualquier componente de la aplicación puede acceder al estado del usuario sin tener que pasar props de un lado a otro. Esto hace que el código sea más limpio y fácil de mantener.
+
+2. **Autenticación y control de acceso**: Al usar UserContext, el sistema puede fácilmente gestionar el inicio y cierre de sesión del usuario, asegurando que solo los usuarios autenticados puedan acceder a ciertas páginas o realizar determinadas acciones (como agregar un libro al carrito de préstamo).
+
+3. **Personalización del flujo de trabajo**: Dependiendo del rol del usuario (admin o usuario), se pueden mostrar diferentes componentes o funcionalidades. Por ejemplo, solo los administradores podrán ver el panel de administración y gestionar libros y préstamos.
+
+**Ejemplo práctico - Navbar condicional:**
+
+```typescript
+// Fragmento de Navbar.tsx
+export function Navbar() {
+  const { user, logout } = useUser();
+
+  return (
+    <nav>
+      {user ? (
+        <>
+          <Link to="/my-loans">Mis Préstamos</Link>
+          <Link to="/cart">Carrito</Link>
+          <button onClick={logout}>Cerrar Sesión</button>
+        </>
+      ) : (
+        <Link to="/login">Iniciar Sesión</Link>
+      )}
+    </nav>
+  );
+}
+```
+
+#### Integración con el resto de la lógica de la aplicación
+
+El UserContext se integra directamente con:
+
+**1. La autenticación de usuarios:**
+
+Los datos del usuario, como el rol y autenticación, son almacenados en el contexto, lo que permite validar el estado de la sesión y asegurar que el flujo del sistema sea consistente con el estado del usuario.
+
+```typescript
+// Ejemplo: Validación de autenticación en BookCard
+const handleAddToCart = (e: React.MouseEvent) => {
+  if (!userId) {
+    navigate('/login');  // Redirige si no está autenticado
+    return;
+  }
+  // ... resto de la lógica
+};
+```
+
+**2. El carrito de préstamos:**
+
+Los usuarios solo pueden agregar libros al carrito si están autenticados. Si no lo están, se les redirige al login.
+
+```typescript
+// Fragmento de Catalog.tsx
+export function Catalog() {
+  const { user } = useUser();
+  
+  return (
+    <BookCard 
+      book={b} 
+      userId={user?.id || null}  // Pasa el ID del usuario desde el contexto
+      isInCart={cartItems.some(item => item.bookId === b.id)}
+    />
+  );
+}
+```
+
+**3. El panel administrativo:**
+
+Solo los administradores pueden acceder a la sección de administración para gestionar usuarios, libros y préstamos.
+
+```typescript
+// Fragmento de AppRouter.tsx - Guard de admin
+function AdminGuard() {
+  const { user } = useUser();
+  if (!user || user.role !== 'Admin') {
+    return <Navigate to="/login" replace />;
+  }
+  return (
+    <>
+      <AdminNavbar />
+      <Outlet />
+    </>
+  );
+}
+```
+
+#### Propósito en el flujo de trabajo del proyecto
+
+UserContext es crucial para el flujo de trabajo de la aplicación, ya que facilita:
+
+1. **Gestión de autenticación**: Cada vez que un usuario se loguea, sus credenciales y rol son almacenados en el contexto, lo que permite que toda la aplicación reaccione a su sesión.
+
+2. **Personalización de la UI**: Dependiendo de si el usuario es un administrador o un usuario regular, se mostrarán diferentes opciones en la aplicación.
+
+3. **Redirección de flujo**: Si un usuario intenta acceder a una página restringida (como el panel de administración) sin estar autenticado o sin tener el rol adecuado, el sistema puede redirigirlos automáticamente al login o mostrarles un mensaje de error.
+
+4. **Acciones condicionadas**: Acciones como agregar un libro al carrito solo están disponibles para usuarios autenticados. El sistema valida automáticamente el estado de sesión antes de permitir estas acciones.
+
+**Ejemplo completo de integración:**
+
+```typescript
+// Validación del estado de sesión en validación de carrito
+export function validateAddToCart(bookId: string, userId: string | null): CartValidationResult {
+  // 1. Verificar autenticación (userId viene del UserContext)
+  if (!userId) {
+    return {
+      canAdd: false,
+      message: 'Debes iniciar sesión para agregar libros al carrito.',
+      reason: 'not_logged_in'
+    };
+  }
+  // ... resto de validaciones
+}
+```
+
+#### Resumen sobre el Uso de UserContext
+
+**Propósito:** Gestionar de manera eficiente la información del usuario (autenticación, rol, estado de sesión) a lo largo de la aplicación.
+
+**Funcionalidad:** Centralizar el estado del usuario y compartirlo entre todos los componentes sin pasar props manualmente.
+
+**Ventajas:**
+
+- ✅ Facilita el acceso a la información del usuario desde cualquier componente
+- ✅ Mejora la experiencia de usuario al manejar la autenticación, validaciones y control de acceso de manera centralizada
+- ✅ Facilita la gestión de roles y permisos, mostrando y ocultando opciones en función del rol del usuario (usuario regular vs administrador)
+- ✅ Evita prop drilling, haciendo el código más limpio y mantenible
+- ✅ Sincroniza automáticamente el estado con localStorage mediante `userService`
+
 ---
 
 ## 5. FUNCIONALIDADES IMPLEMENTADAS

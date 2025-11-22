@@ -18,6 +18,9 @@ export function BookForm({ book, onSave, onCancel }: BookFormProps) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
   const [status, setStatus] = useState<'disponible' | 'prestado' | 'reservado'>('disponible');
 
   // Si hay un book, es modo edición: llenar el formulario con sus datos
@@ -26,6 +29,9 @@ export function BookForm({ book, onSave, onCancel }: BookFormProps) {
       setTitle(book.title);
       setAuthor(book.author);
       setCategory(book.category);
+      setDescription(book.description || '');
+      setCoverUrl(book.coverUrl || '');
+      setBannerUrl(book.bannerUrl || '');
       setStatus(book.status);
     }
   }, [book]);
@@ -33,18 +39,31 @@ export function BookForm({ book, onSave, onCancel }: BookFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const bookData = {
+      title,
+      author,
+      category,
+      description: description || 'Sin descripción',
+      coverUrl: coverUrl || '/img/books/default.jpg',
+      bannerUrl: bannerUrl || undefined,
+      status,
+    };
+    
     if (book) {
       // Modo edición
-      bookService.update(book.id, { title, author, category, status });
+      bookService.update(book.id, bookData);
     } else {
       // Modo creación
-      bookService.add({ title, author, category, status });
+      bookService.add(bookData);
     }
 
     // Resetear formulario
     setTitle('');
     setAuthor('');
     setCategory('');
+    setDescription('');
+    setCoverUrl('');
+    setBannerUrl('');
     setStatus('disponible');
     
     onSave();
@@ -88,6 +107,37 @@ export function BookForm({ book, onSave, onCancel }: BookFormProps) {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               required
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="description" className="form-label">Descripción</label>
+            <textarea
+              className="form-control"
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="coverUrl" className="form-label">URL de Portada</label>
+            <input
+              type="text"
+              className="form-control"
+              id="coverUrl"
+              value={coverUrl}
+              onChange={(e) => setCoverUrl(e.target.value)}
+              placeholder="/img/books/nombre.jpg"
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="bannerUrl" className="form-label">URL de Banner (opcional)</label>
+            <input
+              type="text"
+              className="form-control"
+              id="bannerUrl"
+              value={bannerUrl}
+              onChange={(e) => setBannerUrl(e.target.value)}
             />
           </div>
           <div className="mb-3">

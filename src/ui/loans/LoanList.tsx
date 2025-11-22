@@ -4,7 +4,7 @@
  * Muestra todos los préstamos. En modo admin, permite aprobar/rechazar préstamos.
  * Usa Bootstrap para tablas responsivas.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { loanService } from '../../services/loan.service';
 import { bookService } from '../../services/book.service';
 import { userService } from '../../services/user.service';
@@ -18,16 +18,16 @@ interface LoanListProps {
 export function LoanList({ isAdmin = false, userId }: LoanListProps) {
   const [loans, setLoans] = useState<LegacyLoan[]>([]);
 
-  useEffect(() => {
-    loadLoans();
-  }, [userId]);
-
-  const loadLoans = () => {
+  const loadLoans = useCallback(() => {
     const allLoans = userId 
       ? loanService.getByUser(userId)
       : loanService.getAll();
     setLoans(allLoans);
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadLoans();
+  }, [loadLoans]);
 
   const handleApprove = (loanId: string) => {
     loanService.approve(loanId);

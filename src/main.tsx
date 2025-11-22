@@ -15,11 +15,15 @@ import { migrateAdminPasswordToMatyxd2006 } from './services/migrations/migrate-
   await migrateAdminPasswordToMatyxd2006();
 })().catch(console.error)
 
+import { ErrorBoundary } from './ui/shared/ErrorBoundary';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <UserProvider>
-      <AppRouter />
-    </UserProvider>
+    <ErrorBoundary>
+      <UserProvider>
+        <AppRouter />
+      </UserProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
 

@@ -1,17 +1,38 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { bookService } from '../../services/book.service';
 import { useUser } from '../../hooks/useUser';
+import { useBookDetails } from '../../hooks/useBookDetails';
 import { cartService } from '../../services/cart.service';
 import { resolveCover, FALLBACK_COVER, withCacheBuster } from '../shared/getCover';
+import { ResourceError } from '../shared/ResourceError';
 
 export function BookDetail() {
-  const { id = '' } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useUser();
-  const book = bookService.getById(id);
+  const { book, loading, error } = useBookDetails(id);
 
+  // Mostrar error si hay
+  if (error) {
+    return <ResourceError error={error} resourceName="libro" />;
+  }
+
+  // Mostrar loading
+  if (loading) {
+    return (
+      <div className="container py-5">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-3 text-muted">Cargando libro...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay libro después de cargar
   if (!book) {
-    return <div className="container py-4"><p className="text-muted">Libro no encontrado.</p></div>;
+    return <ResourceError error={new Error('Libro no encontrado')} resourceName="libro" />;
   }
 
   const handleAddToCart = () => {

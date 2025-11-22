@@ -1,38 +1,50 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../hooks/useUser';
-import { loanService } from '../../services/loan.service';
-import { bookService } from '../../services/book.service';
-import type { LegacyLoan } from '../../domain/loan';
-import type { Book } from '../../domain/book';
-
-interface LoanWithBook extends LegacyLoan {
-  book: Book | null;
-}
+import { useUserLoans } from '../../hooks/useUserLoans';
+import { ResourceError } from '../shared/ResourceError';
+import { EmptyState } from '../shared/EmptyState';
 
 export function MyLoans() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const [loans, setLoans] = useState<LoanWithBook[]>([]);
+  const { loans, loading, error, reload } = useUserLoans(user?.id);
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    const userLoans = loanService.getByUser(user.id);
-    const loansWithBooks: LoanWithBook[] = userLoans.map(loan => {
-      const book = bookService.getById(loan.bookId);
-      return {
-        ...loan,
-        book: book || null
-      };
-    });
-    setLoans(loansWithBooks);
-  }, [user, navigate]);
-
+  // Redirigir si no hay usuario
   if (!user) {
+    navigate('/login');
     return null;
+  }
+
+  // Mostrar error si hay
+  if (error && loans.length === 0) {
+    return <ResourceError error={error} resourceName="préstamos" />;
+  }
+
+  // Mostrar loading
+  if (loading && loans.length === 0) {
+    return (
+      <div className="container py-5">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-3 text-muted">Cargando tus préstamos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar estado vacío si no hay préstamos
+  if (!loading && loans.length === 0) {
+    return (
+      <EmptyState
+        title="No tienes préstamos registrados"
+        message="Explora nuestro catálogo de libros y solicita préstamos cuando encuentres algo que te interese."
+        actionLabel="Explorar catálogo"
+        actionPath="/catalog"
+        icon="bi-journal-text"
+      />
+    );
   }
 
   const getStatusBadge = (status: string) => {
@@ -45,28 +57,20 @@ export function MyLoans() {
     return badges[status] || 'bg-secondary';
   };
 
-  if (loans.length === 0) {
-    return (
-      <div className="container py-4">
-        <h2 className="mb-4">
-          <i className="bi bi-journal-text me-2"></i>Mis Préstamos
-        </h2>
-        <div className="alert alert-info">
-          <i className="bi bi-info-circle me-2"></i>
-          No tienes préstamos registrados.
-        </div>
-        <button className="btn btn-primary" onClick={() => navigate('/catalog')}>
-          <i className="bi bi-book me-1"></i>Explorar catálogo
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="container py-4">
-      <h2 className="mb-4">
-        <i className="bi bi-journal-text me-2"></i>Mis Préstamos
-      </h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">
+          <i className="bi bi-journal-text me-2"></i>Mis Préstamos
+        </h2>
+        {error && (
+          <div className="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            Mostrando datos del almacenamiento local.
+            <button type="button" className="btn-close" onClick={reload}></button>
+          </div>
+        )}
+      </div>
       <div className="table-responsive">
         <table className="table table-hover shadow-sm">
           <thead className="table-light">
