@@ -61,9 +61,9 @@ export const usersApi = {
    * Endpoint: POST /api/auth/login
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    // El endpoint de login retorna AuthResponse directamente, no en formato ApiResponse
+    // El login retorna directamente AuthResponse (no tiene formato 'ok')
     return await httpClient.post<AuthResponse>(
-      `http://localhost:8081/api/auth/login`,
+      `${httpClient.urls.auth}/login`,
       credentials
     );
   },

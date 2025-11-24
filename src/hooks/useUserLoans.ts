@@ -1,24 +1,23 @@
 /**
- * Hook personalizado para obtener préstamos del usuario actual
- * 
- * Maneja:
- * - Carga de préstamos
- * - Estados de loading y error
- * - Integración con libros
- * - Mapeo entre PrestamoDTO (backend) y LegacyLoan (frontend)
+ * Hook simple para obtener préstamos del usuario
+ * Si no hay userId, no carga nada
+ * Si falla la API, usa localStorage como respaldo
  */
 import { useState, useEffect } from 'react';
 import { loansApi } from '../api/loansApi';
 import { ApiError } from '../api/httpClient';
 import { mapPrestamoDTOArrayToLegacyLoans } from '../utils/loanMapper';
 import { bookService } from '../services/book.service';
+import { loanService } from '../services/loan.service';
 import type { LegacyLoan } from '../domain/loan';
 import type { Book } from '../domain/book';
 
+// Tipo: préstamo con información del libro
 interface LoanWithBook extends LegacyLoan {
   book: Book | null;
 }
 
+// Lo que devuelve el hook
 interface UseUserLoansResult {
   loans: LoanWithBook[];
   loading: boolean;
@@ -31,7 +30,9 @@ export function useUserLoans(userId: string | undefined): UseUserLoansResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | Error | null>(null);
 
+  // Función que carga los préstamos
   const loadLoans = async () => {
+    // Si no hay usuario, no hacer nada
     if (!userId) {
       setLoading(false);
       return;
@@ -41,34 +42,34 @@ export function useUserLoans(userId: string | undefined): UseUserLoansResult {
     setError(null);
 
     try {
-      // Convertir string ID a number para la API
+      // Intentar cargar desde la API
       const numericUserId = parseInt(userId, 10);
       if (isNaN(numericUserId)) {
         throw new Error('ID de usuario inválido');
       }
 
-      // Intentar primero con la API
+      // Obtener préstamos de la API
       const prestamosDTO = await loansApi.getByUser(numericUserId);
       
-      // Mapear PrestamoDTO[] a LegacyLoan[]
+      // Convertir formato de la API al formato del frontend
       const legacyLoans = mapPrestamoDTOArrayToLegacyLoans(prestamosDTO);
       
-      // Enriquecer con información de libros
+      // Agregar información del libro a cada préstamo
       const loansWithBooks: LoanWithBook[] = legacyLoans.map(loan => {
         const book = bookService.getById(loan.bookId);
         return {
           ...loan,
-          book: book || null,
+          book: book || null, // Si no encuentra el libro, poner null
         };
       });
       
       setLoans(loansWithBooks);
     } catch (err) {
-      // Fallback a localStorage si la API falla
+      // Si falla la API, intentar usar localStorage
       try {
-        const { loanService } = await import('../services/loan.service');
         const localLoans = loanService.getByUser(userId);
         
+        // Agregar información del libro
         const loansWithBooks: LoanWithBook[] = localLoans.map(loan => {
           const book = bookService.getById(loan.bookId);
           return {
@@ -78,8 +79,9 @@ export function useUserLoans(userId: string | undefined): UseUserLoansResult {
         });
         
         setLoans(loansWithBooks);
-        setError(null); // No hay error si encontramos en localStorage
+        setError(null); // No hay error si funciona con localStorage
       } catch {
+        // Si todo falla, mostrar error
         setError(err instanceof ApiError ? err : new Error('Error al cargar los préstamos'));
       }
     } finally {
@@ -87,6 +89,7 @@ export function useUserLoans(userId: string | undefined): UseUserLoansResult {
     }
   };
 
+  // Cargar préstamos cuando cambia el userId
   useEffect(() => {
     loadLoans();
     // eslint-disable-next-line react-hooks/exhaustive-deps

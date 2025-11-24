@@ -1,13 +1,6 @@
 /**
- * Servicio de gestión de préstamos
- * 
- * Contiene la lógica de negocio de los préstamos:
- * - Crear préstamos (simular préstamo del ERS)
- * - Aprobar/rechazar préstamos (función del admin)
- * - Marcar como devuelto
- * 
- * En el ERS original, los préstamos se guardaban en localStorage
- * con la clave 'prestamos'. Aquí centralizamos toda esa lógica.
+ * Servicio simple para gestionar préstamos
+ * Lee y escribe préstamos en localStorage
  */
 import { storageService } from './storage.service';
 import type { LegacyLoan } from '../domain/loan';
@@ -15,142 +8,143 @@ import { bookService } from './book.service';
 
 export const loanService = {
   /**
-   * Obtiene todos los préstamos.
+   * Obtiene todos los préstamos guardados
    */
   getAll(): LegacyLoan[] {
     return storageService.read<LegacyLoan[]>(storageService.keys.loans, []);
   },
 
   /**
-   * Guarda el array completo de préstamos.
+   * Guarda todos los préstamos en localStorage
    */
   saveAll(loans: LegacyLoan[]): void {
     storageService.write(storageService.keys.loans, loans);
   },
 
   /**
-   * Solicitud de préstamo: crea Loan en estado 'pendiente' con dueDate (14 días).
-   * 
-   * @param userId id del usuario
-   * @param bookId id del libro
-   * @returns préstamo creado
+   * Crea una solicitud de préstamo (estado: pendiente)
+   * Duración: 14 días
    */
   request(userId: string, bookId: string): LegacyLoan {
-    const current = this.getAll();
-    const now = new Date();
-    const due = new Date(now);
-    due.setDate(now.getDate() + 14);
-    const newLoan: LegacyLoan = {
+    const prestamos = this.getAll();
+    const hoy = new Date();
+    const vencimiento = new Date(hoy);
+    vencimiento.setDate(hoy.getDate() + 14); // 14 días después
+    
+    const nuevoPrestamo: LegacyLoan = {
       id: crypto.randomUUID(),
       userId,
       bookId,
-      loanDate: now.toISOString(),
-      dueDate: due.toISOString(),
+      loanDate: hoy.toISOString(),
+      dueDate: vencimiento.toISOString(),
       status: 'pendiente'
     };
-    current.push(newLoan);
-    this.saveAll(current);
-    return newLoan;
+    
+    prestamos.push(nuevoPrestamo);
+    this.saveAll(prestamos);
+    return nuevoPrestamo;
   },
 
   /**
-   * Aprueba un préstamo pendiente.
-   * Cambia el estado a 'aprobado' y actualiza el estado del libro a 'prestado'.
-   * 
-   * @param loanId - ID del préstamo a aprobar
-   * @returns El préstamo actualizado, o null si no se encontró
+   * Aprueba un préstamo pendiente
+   * Cambia el libro a estado 'prestado'
    */
   approve(loanId: string): LegacyLoan | null {
-    const loans = this.getAll();
-    const loan = loans.find(l => l.id === loanId);
-    if (!loan || loan.status !== 'pendiente') return null;
-
-    loan.status = 'aprobado';
-    // Actualizar estado del libro a 'prestado'
-    bookService.update(loan.bookId, { status: 'prestado' });
+    const prestamos = this.getAll();
+    const prestamo = prestamos.find(p => p.id === loanId);
     
-    this.saveAll(loans);
-    return loan;
+    // Solo se puede aprobar si está pendiente
+    if (!prestamo || prestamo.status !== 'pendiente') return null;
+
+    prestamo.status = 'aprobado';
+    // Marcar el libro como prestado
+    bookService.update(prestamo.bookId, { status: 'prestado' });
+    
+    this.saveAll(prestamos);
+    return prestamo;
   },
 
   /**
-   * Rechaza un préstamo pendiente.
-   * 
-   * @param loanId - ID del préstamo a rechazar
-   * @returns El préstamo actualizado, o null si no se encontró
+   * Rechaza un préstamo pendiente
    */
   reject(loanId: string): LegacyLoan | null {
-    const loans = this.getAll();
-    const loan = loans.find(l => l.id === loanId);
-    if (!loan || loan.status !== 'pendiente') return null;
+    const prestamos = this.getAll();
+    const prestamo = prestamos.find(p => p.id === loanId);
+    
+    // Solo se puede rechazar si está pendiente
+    if (!prestamo || prestamo.status !== 'pendiente') return null;
 
-    loan.status = 'rechazado';
-    this.saveAll(loans);
-    return loan;
+    prestamo.status = 'rechazado';
+    this.saveAll(prestamos);
+    return prestamo;
   },
 
   /**
-   * Marca un préstamo como devuelto.
-   * Cambia el estado del libro a 'disponible'.
-   * 
-   * @param loanId - ID del préstamo a devolver
-   * @returns El préstamo actualizado, o null si no se encontró
+   * Marca un préstamo como devuelto
+   * Cambia el libro a estado 'disponible'
    */
   returnBook(loanId: string): LegacyLoan | null {
-    const loans = this.getAll();
-    const loan = loans.find(l => l.id === loanId);
-    if (!loan || loan.status !== 'aprobado') return null;
-
-    loan.returnDate = new Date().toISOString();
-    loan.status = 'devuelto';
-    // Actualizar estado del libro a 'disponible'
-    bookService.update(loan.bookId, { status: 'disponible' });
+    const prestamos = this.getAll();
+    const prestamo = prestamos.find(p => p.id === loanId);
     
-    this.saveAll(loans);
-    return loan;
+    // Solo se puede devolver si está aprobado
+    if (!prestamo || prestamo.status !== 'aprobado') return null;
+
+    prestamo.returnDate = new Date().toISOString();
+    prestamo.status = 'devuelto';
+    // Marcar el libro como disponible
+    bookService.update(prestamo.bookId, { status: 'disponible' });
+    
+    this.saveAll(prestamos);
+    return prestamo;
   },
 
   /**
-   * Obtiene todos los préstamos de un usuario.
+   * Obtiene todos los préstamos de un usuario
    */
   getByUser(userId: string): LegacyLoan[] {
-    return this.getAll().filter(l => l.userId === userId);
+    const todos = this.getAll();
+    return todos.filter(prestamo => prestamo.userId === userId);
   },
 
   /**
-   * Obtiene todos los préstamos de un libro.
+   * Obtiene todos los préstamos de un libro
    */
   getByBookId(bookId: string): LegacyLoan[] {
-    return this.getAll().filter(l => l.bookId === bookId);
+    const todos = this.getAll();
+    return todos.filter(prestamo => prestamo.bookId === bookId);
   },
 
   /**
-   * Obtiene un préstamo por su ID.
+   * Busca un préstamo por su ID
    */
   getById(loanId: string): LegacyLoan | null {
-    const loans = this.getAll();
-    return loans.find(l => l.id === loanId) || null;
+    const prestamos = this.getAll();
+    return prestamos.find(p => p.id === loanId) || null;
   },
 
   /**
-   * Crea múltiples préstamos en una sola operación (para carrito)
+   * Crea múltiples préstamos a la vez (para carrito)
    */
   requestMany(userId: string, bookIds: string[]): LegacyLoan[] {
-    const loans = this.getAll();
-    const now = new Date();
-    const due = new Date(now);
-    due.setDate(now.getDate() + 14);
-    const newLoans: LegacyLoan[] = bookIds.map(bookId => ({
+    const prestamos = this.getAll();
+    const hoy = new Date();
+    const vencimiento = new Date(hoy);
+    vencimiento.setDate(hoy.getDate() + 14); // 14 días después
+    
+    // Crear un préstamo para cada libro
+    const nuevosPrestamos: LegacyLoan[] = bookIds.map(bookId => ({
       id: crypto.randomUUID(),
       userId,
       bookId,
-      loanDate: now.toISOString(),
-      dueDate: due.toISOString(),
+      loanDate: hoy.toISOString(),
+      dueDate: vencimiento.toISOString(),
       status: 'pendiente'
     }));
-    loans.push(...newLoans);
-    this.saveAll(loans);
-    return newLoans;
+    
+    prestamos.push(...nuevosPrestamos);
+    this.saveAll(prestamos);
+    return nuevosPrestamos;
   }
 };
 

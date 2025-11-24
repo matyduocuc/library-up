@@ -1,18 +1,16 @@
 /**
- * Hook personalizado para obtener detalles de un libro
- * 
- * Maneja:
- * - Carga del libro
- * - Estados de loading y error
- * - Reintentos opcionales
- * - Mapeo entre LibroDTO (backend) y Book (frontend)
+ * Hook simple para obtener detalles de un libro
+ * Si no hay bookId, no carga nada
+ * Si falla la API, usa localStorage como respaldo
  */
 import { useState, useEffect } from 'react';
 import { booksApi } from '../api/booksApi';
 import { ApiError } from '../api/httpClient';
 import { mapLibroDTOToBook } from '../utils/bookMapper';
+import { bookService } from '../services/book.service';
 import type { Book } from '../domain/book';
 
+// Lo que devuelve el hook
 interface UseBookDetailsResult {
   book: Book | null;
   loading: boolean;
@@ -25,7 +23,9 @@ export function useBookDetails(bookId: string | undefined): UseBookDetailsResult
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | Error | null>(null);
 
+  // Función que carga el libro
   const loadBook = async () => {
+    // Si no hay ID, mostrar error
     if (!bookId) {
       setError(new Error('ID de libro no proporcionado'));
       setLoading(false);
@@ -36,21 +36,20 @@ export function useBookDetails(bookId: string | undefined): UseBookDetailsResult
     setError(null);
 
     try {
-      // Convertir string ID a number para la API
+      // Intentar cargar desde la API
       const numericId = parseInt(bookId, 10);
       if (isNaN(numericId)) {
         throw new Error('ID de libro inválido');
       }
 
-      // Intentar primero con la API
+      // Obtener libro de la API
       const libroDTO = await booksApi.getById(numericId);
       if (libroDTO) {
-        // Mapear LibroDTO a Book
+        // Convertir formato de la API al formato del frontend
         const mappedBook = mapLibroDTOToBook(libroDTO);
         setBook(mappedBook);
       } else {
-        // Fallback a localStorage si la API retorna null
-        const { bookService } = await import('../services/book.service');
+        // Si la API retorna null, buscar en localStorage
         const localBook = bookService.getById(bookId);
         if (localBook) {
           setBook(localBook);
@@ -59,17 +58,17 @@ export function useBookDetails(bookId: string | undefined): UseBookDetailsResult
         }
       }
     } catch (err) {
-      // Si hay error de API, intentar con localStorage como fallback
+      // Si falla la API, intentar usar localStorage
       try {
-        const { bookService } = await import('../services/book.service');
         const localBook = bookService.getById(bookId);
         if (localBook) {
           setBook(localBook);
-          setError(null); // No hay error si encontramos en localStorage
+          setError(null); // No hay error si funciona con localStorage
         } else {
           setError(err instanceof ApiError ? err : new Error('Error al cargar el libro'));
         }
       } catch {
+        // Si todo falla, mostrar error
         setError(err instanceof ApiError ? err : new Error('Error al cargar el libro'));
       }
     } finally {
@@ -77,6 +76,7 @@ export function useBookDetails(bookId: string | undefined): UseBookDetailsResult
     }
   };
 
+  // Cargar libro cuando cambia el bookId
   useEffect(() => {
     loadBook();
     // eslint-disable-next-line react-hooks/exhaustive-deps

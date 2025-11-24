@@ -1,20 +1,22 @@
 /**
- * Cliente HTTP centralizado para comunicación con microservicios
+ * Cliente HTTP simple para comunicarse con los microservicios de Java
  * 
- * Configuración base para todas las llamadas API:
- * - Base URL configurable por variable de entorno
- * - Manejo homogéneo de errores
- * - Interceptores para headers comunes
+ * URLs de los 4 microservicios principales:
+ * - Libros: puerto 8082
+ * - Usuarios: puerto 8081
+ * - Préstamos: puerto 8083
+ * - Informes: puerto 8085
  */
 
-// URLs base de microservicios (configurables por .env)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// URLs de los microservicios principales (puedes cambiarlas en un archivo .env si necesitas)
 const BOOKS_API_URL = import.meta.env.VITE_BOOKS_API_URL || 'http://localhost:8082/api/libros';
 const USERS_API_URL = import.meta.env.VITE_USERS_API_URL || 'http://localhost:8081/api/usuarios';
+const AUTH_API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8081/api/auth';
 const LOANS_API_URL = import.meta.env.VITE_LOANS_API_URL || 'http://localhost:8083/api/v1/prestamos';
 const REPORTS_API_URL = import.meta.env.VITE_REPORTS_API_URL || 'http://localhost:8085/api/informes';
 
-// URLs para microservicios de Cursos y Estudiantes
+// URLs opcionales (no usadas en los 4 microservicios principales)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const COURSES_API_URL = import.meta.env.VITE_COURSES_API_URL || `${API_BASE_URL}/api/v1/course`;
 const STUDENTS_API_URL = import.meta.env.VITE_STUDENTS_API_URL || `${API_BASE_URL}/api/v1/student`;
 
@@ -44,149 +46,94 @@ export class ApiError extends Error {
 }
 
 /**
- * Cliente HTTP genérico con manejo de errores
+ * Función simple para hacer peticiones HTTP a los microservicios
+ * Maneja automáticamente el formato de respuesta del backend Java
  */
-async function request<T>(
-  url: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const defaultHeaders: HeadersInit = {
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+  // Headers por defecto
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
 
-  // Agregar token de autenticación si existe
+  // Agregar token si el usuario está logueado
   const session = localStorage.getItem('session');
   if (session) {
     try {
       const sessionData = JSON.parse(session);
       if (sessionData.token) {
-        defaultHeaders['Authorization'] = `Bearer ${sessionData.token}`;
+        headers['Authorization'] = `Bearer ${sessionData.token}`;
       }
     } catch {
-      // Ignorar errores de parseo de sesión
+      // Si hay error al parsear, continuar sin token
     }
   }
 
-  const config: RequestInit = {
+  // Hacer la petición
+  const response = await fetch(url, {
     ...options,
     headers: {
-      ...defaultHeaders,
+      ...headers,
       ...options.headers,
     },
-  };
+  });
 
-  try {
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      let errorMessage = `Error ${response.status}: ${response.statusText}`;
-      let errorData: unknown = null;
-      
-      try {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          errorData = await response.json();
-          
-          // Manejar formato estándar { success, message, error }
-          if (typeof errorData === 'object' && errorData !== null) {
-            const err = errorData as { success?: boolean; message?: string; error?: string; data?: unknown };
-            errorMessage = err.message || err.error || errorMessage;
-          } else if (typeof errorData === 'string') {
-            errorMessage = errorData;
-          }
-        } else {
-          // Si no es JSON, intentar leer como texto
-          const text = await response.text();
-          if (text) {
-            errorMessage = text;
-          }
-        }
-      } catch {
-        // Si no se puede parsear el error, usar el mensaje por defecto
-      }
-      
-      throw new ApiError(errorMessage, response.status, response.statusText);
-    }
-
-    // Si la respuesta está vacía (204 No Content)
-    if (response.status === 204) {
-      return {} as T;
-    }
-
-    // Intentar parsear la respuesta como JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      
-      // Manejar formato ApiResponse con 'ok' (microservicios Biblioteca)
-      if (typeof data === 'object' && data !== null && 'ok' in data) {
-        const apiResponse = data as { ok: boolean; data?: T; message?: string; statusCode?: number };
-        if (apiResponse.ok && apiResponse.data !== undefined) {
-          return apiResponse.data;
-        } else {
-          throw new ApiError(
-            apiResponse.message || 'Error en la respuesta del servidor',
-            apiResponse.statusCode || response.status,
-            response.statusText
-          );
-        }
-      }
-      
-      // Manejar formato ApiResponse con 'success' (otros microservicios)
-      if (typeof data === 'object' && data !== null && 'success' in data) {
-        const apiResponse = data as ApiResponse<T>;
-        if (apiResponse.success && apiResponse.data !== undefined) {
-          return apiResponse.data;
-        } else {
-          throw new ApiError(
-            apiResponse.message || apiResponse.error || 'Error en la respuesta del servidor',
-            response.status,
-            response.statusText
-          );
-        }
-      }
-      
-      // Si no tiene formato estándar, retornar la data directamente
-      return data;
+  // Si hay error en la respuesta
+  if (!response.ok) {
+    let mensaje = `Error ${response.status}: ${response.statusText}`;
+    
+    // Intentar obtener mensaje de error del backend
+    try {
+      const errorData = await response.json();
+      if (errorData.message) mensaje = errorData.message;
+      else if (errorData.error) mensaje = errorData.error;
+    } catch {
+      // Si no se puede parsear, usar mensaje por defecto
     }
     
-    // Si no es JSON, intentar leer como texto
-    const text = await response.text();
-    if (text) {
-      try {
-        return JSON.parse(text) as T;
-      } catch {
-        return text as unknown as T;
-      }
-    }
-    
-    return {} as T;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    // Error de red o timeout
-    throw new ApiError(
-      'Error de conexión. Verifica tu conexión a internet.',
-      0,
-      'Network Error'
-    );
+    throw new ApiError(mensaje, response.status, response.statusText);
   }
+
+  // Si la respuesta está vacía (204 No Content)
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  // Parsear la respuesta JSON
+  const data = await response.json();
+  
+  // El backend Java devuelve respuestas en formato { ok: true, data: {...} }
+  // o directamente los datos
+  if (typeof data === 'object' && data !== null && 'ok' in data) {
+    // Formato con 'ok': extraer el campo 'data'
+    const respuesta = data as { ok: boolean; data?: T; message?: string };
+    if (respuesta.ok && respuesta.data !== undefined) {
+      return respuesta.data;
+    } else {
+      throw new ApiError(
+        respuesta.message || 'Error en la respuesta del servidor',
+        response.status,
+        response.statusText
+      );
+    }
+  }
+  
+  // Si no tiene formato 'ok', retornar directamente
+  return data;
 }
 
 /**
- * Cliente HTTP exportado con métodos helper
+ * Cliente HTTP con métodos simples para GET, POST, PUT, DELETE
  */
 export const httpClient = {
   /**
-   * GET request
+   * GET: obtener datos
    */
   get: <T>(url: string): Promise<T> => {
     return request<T>(url, { method: 'GET' });
   },
 
   /**
-   * POST request
+   * POST: crear nuevo
    */
   post: <T>(url: string, body: unknown): Promise<T> => {
     return request<T>(url, {
@@ -196,7 +143,7 @@ export const httpClient = {
   },
 
   /**
-   * PUT request
+   * PUT: actualizar
    */
   put: <T>(url: string, body: unknown): Promise<T> => {
     return request<T>(url, {
@@ -206,14 +153,14 @@ export const httpClient = {
   },
 
   /**
-   * DELETE request
+   * DELETE: eliminar
    */
   delete: <T>(url: string): Promise<T> => {
     return request<T>(url, { method: 'DELETE' });
   },
 
   /**
-   * PATCH request
+   * PATCH: actualización parcial
    */
   patch: <T>(url: string, body: unknown): Promise<T> => {
     return request<T>(url, {
@@ -222,14 +169,15 @@ export const httpClient = {
     });
   },
 
-  // URLs exportadas para uso en otros módulos
+  // URLs de los microservicios (para usar en otros archivos)
   urls: {
     books: BOOKS_API_URL,
     users: USERS_API_URL,
+    auth: AUTH_API_URL,
     loans: LOANS_API_URL,
     reports: REPORTS_API_URL,
-    courses: COURSES_API_URL,
-    students: STUDENTS_API_URL,
+    courses: COURSES_API_URL,  // Opcional (no usado en los 4 principales)
+    students: STUDENTS_API_URL, // Opcional (no usado en los 4 principales)
   },
 };
 
